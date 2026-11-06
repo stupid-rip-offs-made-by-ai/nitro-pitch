@@ -1,0 +1,1311 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Nitro Pitch</title>
+<style>
+html,body{margin:0;height:100%;background:#04060c;color-scheme:dark;overflow:hidden;font-family:"Segoe UI",system-ui,Roboto,Helvetica,Arial,sans-serif;color:#fff;user-select:none;-webkit-user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none}
+#hud{pointer-events:none}
+#menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;
+ background:radial-gradient(ellipse at 50% 20%,rgba(30,60,140,.55),rgba(3,5,12,.94) 70%)}
+#menu.hide{display:none}
+.panel{width:min(760px,94vw);padding:26px 30px 22px;border-radius:18px;background:rgba(10,16,32,.78);border:1px solid rgba(120,170,255,.25);box-shadow:0 20px 80px rgba(0,0,0,.6),inset 0 0 60px rgba(60,110,255,.08);backdrop-filter:blur(6px);max-height:96vh;overflow:auto}
+h1{margin:0;font-size:clamp(34px,7vw,64px);letter-spacing:.06em;font-style:italic;font-weight:900;line-height:1;
+ background:linear-gradient(90deg,#33a0ff 0%,#9be0ff 40%,#ffb255 60%,#ff6a1a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 18px rgba(80,150,255,.45))}
+.sub{opacity:.7;margin:6px 0 18px;letter-spacing:.2em;font-size:12px;text-transform:uppercase}
+.row{display:flex;align-items:center;gap:12px;margin:10px 0;flex-wrap:wrap}
+.row label{width:110px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.75}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{all:unset;cursor:pointer;padding:8px 16px;border-radius:9px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);font-weight:700;font-size:14px;transition:.15s}
+.seg button:hover{background:rgba(255,255,255,.16)}
+.seg button.on{background:linear-gradient(180deg,#2c7bff,#1a4fd0);border-color:#7db1ff;box-shadow:0 0 18px rgba(60,130,255,.5)}
+.seg button.on.orange{background:linear-gradient(180deg,#ff9a2c,#d9570a);border-color:#ffc27d;box-shadow:0 0 18px rgba(255,140,40,.5)}
+#go{all:unset;cursor:pointer;display:block;text-align:center;margin:18px 0 12px;padding:14px;border-radius:12px;font-size:20px;font-weight:900;letter-spacing:.2em;font-style:italic;
+ background:linear-gradient(90deg,#1f6bff,#ff7a1a);box-shadow:0 8px 34px rgba(90,120,255,.45);transition:.15s}
+#go:hover{transform:scale(1.02);filter:brightness(1.15)}
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:4px 18px;font-size:12.5px;opacity:.82;margin-top:6px}
+.keys b{display:inline-block;min-width:22px;text-align:center;padding:1px 6px;margin-right:6px;border-radius:5px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);font-size:11.5px}
+#endbox{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:4;background:rgba(2,4,10,.55)}
+#endbox .panel{text-align:center}
+#endbox h2{margin:0;font-size:56px;font-style:italic;letter-spacing:.08em}
+#pause{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:4;background:rgba(2,4,10,.6);font-size:30px;letter-spacing:.2em;text-align:center}
+#fallback{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9;background:#04060c;text-align:center;padding:30px}
+</style>
+<canvas id="gl" tabindex="0"></canvas><canvas id="hud"></canvas>
+<div id="menu"><div class="panel">
+ <h1>NITRO PITCH</h1>
+ <div class="sub">Rocket-powered car soccer &nbsp;·&nbsp; wall rides &nbsp;·&nbsp; flips &nbsp;·&nbsp; demolitions</div>
+ <div class="row"><label>Mode</label><div class="seg" id="s-mode"><button data-v="1">1 v 1</button><button data-v="2" class="on">2 v 2</button><button data-v="3">3 v 3</button></div></div>
+ <div class="row"><label>Bots</label><div class="seg" id="s-diff"><button data-v="0">Rookie</button><button data-v="1" class="on">Pro</button><button data-v="2">All-Star</button></div></div>
+ <div class="row"><label>Match</label><div class="seg" id="s-len"><button data-v="120">2:00</button><button data-v="180" class="on">3:00</button><button data-v="300">5:00</button></div></div>
+ <div class="row"><label>Your team</label><div class="seg" id="s-team"><button data-v="0" class="on">Blue</button><button data-v="1" class="orange">Orange</button></div></div>
+ <button id="go">KICK OFF</button>
+ <div class="keys">
+  <div><b>W</b><b>S</b> throttle / brake</div><div><b>A</b><b>D</b> steer / air yaw</div>
+  <div><b>Space</b> jump · tap again to flip</div><div><b>Shift</b> / <b>Mouse L</b> boost</div>
+  <div><b>C</b> / <b>Mouse R</b> powerslide</div><div><b>Q</b><b>E</b> air roll · <b>W</b><b>S</b> air pitch</div>
+  <div><b>V</b> / <b>Tab</b> ball cam</div><div><b>R</b> reset car &nbsp; <b>Esc</b> pause</div>
+  <div>Gamepad: stick, RT/LT drive, A jump, B boost, X slide, Y cam</div><div>Hit a car at supersonic speed to <b>demolish</b> it</div>
+ </div>
+</div></div>
+<div id="endbox"><div class="panel"><h2 id="endtitle">VICTORY</h2><div class="sub" id="endscore"></div>
+ <div class="row" style="justify-content:center"><div class="seg"><button id="again" class="on">Rematch</button><button id="tomenu">Menu</button></div></div></div></div>
+<div id="pause">PAUSED<div style="font-size:14px;opacity:.7;margin-top:10px">Esc to resume</div></div>
+<div id="fallback"><div><h1>NITRO PITCH</h1><p>This game needs WebGL 2. Please open it in a recent Chrome, Edge, Firefox or Safari.</p></div></div>
+<script>
+'use strict';
+/* ===================== math ===================== */
+const TAU=Math.PI*2, PI=Math.PI;
+const clamp=(x,a,b)=>x<a?a:x>b?b:x;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const sgn=x=>x<0?-1:1;
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const mul=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+const len=a=>Math.hypot(a[0],a[1],a[2]);
+const norm=a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l];};
+const madd=(a,b,s)=>[a[0]+b[0]*s,a[1]+b[1]*s,a[2]+b[2]*s];
+const rotAxis=(v,ax,ang)=>{const c=Math.cos(ang),s=Math.sin(ang),d=dot(ax,v)*(1-c),k=cross(ax,v);
+  return [v[0]*c+k[0]*s+ax[0]*d,v[1]*c+k[1]*s+ax[1]*d,v[2]*c+k[2]*s+ax[2]*d];};
+let _seed=1234567;const rnd=()=>{_seed=(_seed*1664525+1013904223)>>>0;return _seed/4294967296;};
+const rr=(a,b)=>a+(b-a)*Math.random();
+
+function persp(fov,asp,n,f){const t=1/Math.tan(fov/2),m=new Float32Array(16);m[0]=t/asp;m[5]=t;m[10]=(f+n)/(n-f);m[11]=-1;m[14]=2*f*n/(n-f);return m;}
+function lookAt(e,c,up){const z=norm(sub(e,c)),x=norm(cross(up,z)),y=cross(z,x);
+  return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-dot(x,e),-dot(y,e),-dot(z,e),1]);}
+function mmul(a,b){const o=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+r]*b[c*4+k];o[c*4+r]=s;}return o;}
+function basisM(l,u,f,p,s){s=s||1;return new Float32Array([l[0]*s,l[1]*s,l[2]*s,0,u[0]*s,u[1]*s,u[2]*s,0,f[0]*s,f[1]*s,f[2]*s,0,p[0],p[1],p[2],1]);}
+function transM(x,y,z){const m=new Float32Array(16);m[0]=m[5]=m[10]=m[15]=1;m[12]=x;m[13]=y;m[14]=z;return m;}
+function rotXM(a){const c=Math.cos(a),s=Math.sin(a),m=new Float32Array(16);m[0]=1;m[5]=c;m[6]=s;m[9]=-s;m[10]=c;m[15]=1;return m;}
+function rotYM(a){const c=Math.cos(a),s=Math.sin(a),m=new Float32Array(16);m[0]=c;m[2]=-s;m[5]=1;m[8]=s;m[10]=c;m[15]=1;return m;}
+function scaleM(x,y,z){const m=new Float32Array(16);m[0]=x;m[5]=y;m[10]=z;m[15]=1;return m;}
+const IDM=new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+function project(vp,p,w,h){const x=vp[0]*p[0]+vp[4]*p[1]+vp[8]*p[2]+vp[12],y=vp[1]*p[0]+vp[5]*p[1]+vp[9]*p[2]+vp[13],
+  ww=vp[3]*p[0]+vp[7]*p[1]+vp[11]*p[2]+vp[15];if(ww<=0.01)return null;return [(x/ww*.5+.5)*w,(1-(y/ww*.5+.5))*h,ww];}
+
+/* ===================== constants ===================== */
+const AX=30, AZ=45, AH=18, R=5, GW=8, GH=6, GD=8, BR=2.0, G=12;
+const TEAMCOL=[[0.12,0.52,1.0],[1.0,0.52,0.1]];
+const TEAMCSS=['#2f9bff','#ff8a1f'];
+
+/* ===================== arena collision ===================== */
+const SN=[0,1,0];
+const BX=AX-R, BY=AH/2-R, BZ=AZ-R, CY=AH/2;
+function surf(x,y,z,rad){
+  const ax=Math.abs(x), az=Math.abs(z);
+  if(az>AZ-R && ax<GW-0.6 && y<GH-0.6){
+    let best=rad-y,nx=0,ny=1,nz=0;
+    if(az>AZ-1){
+      let p=rad-(GW-ax); if(p>best){best=p;nx=x>0?-1:1;ny=0;nz=0;}
+      p=rad-(GH-y); if(p>best){best=p;nx=0;ny=-1;nz=0;}
+      p=rad-(AZ+GD-az); if(p>best){best=p;nx=0;ny=0;nz=z>0?-1:1;}
+    }
+    SN[0]=nx;SN[1]=ny;SN[2]=nz;return best;
+  }
+  const qx=ax-BX, qy=Math.abs(y-CY)-BY, qz=az-BZ;
+  const kx=qx>0?qx:0, ky=qy>0?qy:0, kz=qz>0?qz:0;
+  const l=Math.sqrt(kx*kx+ky*ky+kz*kz);
+  if(l<1e-6){SN[0]=0;SN[1]=1;SN[2]=0;return -1e9;}
+  const pen=l+rad-R;
+  const sx=x<0?1:-1, sy=y<CY?1:-1, sz=z<0?1:-1;
+  SN[0]=sx*kx/l; SN[1]=sy*ky/l; SN[2]=sz*kz/l;
+  return pen;
+}
+
+/* ===================== mesh builder ===================== */
+class MB{
+  constructor(){this.v=[];this.i=[];this.n=0;}
+  vert(p,n,c,m){this.v.push(p[0],p[1],p[2],n[0],n[1],n[2],c[0],c[1],c[2],c.length>3?c[3]:1,m);return this.n++;}
+  tri(a,b,c){this.i.push(a,b,c);}
+  poly(pts,n,c,m){const ids=pts.map(p=>this.vert(p,n,c,m));for(let k=1;k<ids.length-1;k++)this.tri(ids[0],ids[k],ids[k+1]);}
+  quad(a,b,c,d,col,m){const n=norm(cross(sub(b,a),sub(d,a)));this.poly([a,b,c,d],n,col,m);}
+  quadN(a,b,c,d,n,col,m){this.poly([a,b,c,d],n,col,m);}
+  hexa(P,col,m){ // 8 points: bottom ring 0-3, top ring 4-7
+    const cen=[0,0,0];for(const p of P){cen[0]+=p[0]/8;cen[1]+=p[1]/8;cen[2]+=p[2]/8;}
+    const F=[[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]];
+    for(const f of F){const a=P[f[0]],b=P[f[1]],c=P[f[2]],d=P[f[3]];let n=norm(cross(sub(b,a),sub(d,a)));
+      const fc=mul(add(add(a,b),add(c,d)),.25);if(dot(n,sub(fc,cen))<0)n=mul(n,-1);this.poly([a,b,c,d],n,col,m);}
+  }
+  box(cx,cy,cz,hx,hy,hz,col,m){this.hexa([[cx-hx,cy-hy,cz-hz],[cx+hx,cy-hy,cz-hz],[cx+hx,cy-hy,cz+hz],[cx-hx,cy-hy,cz+hz],
+    [cx-hx,cy+hy,cz-hz],[cx+hx,cy+hy,cz-hz],[cx+hx,cy+hy,cz+hz],[cx-hx,cy+hy,cz+hz]],col,m);}
+  cylX(cx,cy,cz,rad,half,seg,col,m,colEnd){ // axis = x
+    for(let k=0;k<seg;k++){const a0=k/seg*TAU,a1=(k+1)/seg*TAU,c0=Math.cos(a0),s0=Math.sin(a0),c1=Math.cos(a1),s1=Math.sin(a1);
+      const n0=[0,c0,s0],n1=[0,c1,s1];
+      const A=[cx-half,cy+c0*rad,cz+s0*rad],B=[cx+half,cy+c0*rad,cz+s0*rad],C=[cx+half,cy+c1*rad,cz+s1*rad],D=[cx-half,cy+c1*rad,cz+s1*rad];
+      const i0=this.vert(A,n0,col,m),i1=this.vert(B,n0,col,m),i2=this.vert(C,n1,col,m),i3=this.vert(D,n1,col,m);
+      this.tri(i0,i1,i2);this.tri(i0,i2,i3);
+      const ce=colEnd||col;
+      this.poly([[cx+half,cy,cz],B,C],[1,0,0],ce,m);this.poly([[cx-half,cy,cz],D,A],[-1,0,0],ce,m);}
+  }
+  build(){
+    const v=new Float32Array(this.v),idx=new Uint32Array(this.i);
+    const vao=gl.createVertexArray();gl.bindVertexArray(vao);
+    const vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.bufferData(gl.ARRAY_BUFFER,v,gl.STATIC_DRAW);
+    const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,idx,gl.STATIC_DRAW);
+    const S=44;gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,S,0);
+    gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,S,12);
+    gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,4,gl.FLOAT,false,S,24);
+    gl.enableVertexAttribArray(3);gl.vertexAttribPointer(3,1,gl.FLOAT,false,S,40);
+    gl.bindVertexArray(null);return {vao,count:idx.length};
+  }
+}
+
+/* ===================== WebGL ===================== */
+const cv=document.getElementById('gl'), hudCv=document.getElementById('hud'), hx=hudCv.getContext('2d');
+const gl=cv.getContext('webgl2',{antialias:true,alpha:false,powerPreference:'high-performance'});
+if(!gl){document.getElementById('fallback').style.display='flex';throw new Error('no webgl2');}
+function mkProg(vs,fs){
+  const p=gl.createProgram();
+  for(const [t,s] of [[gl.VERTEX_SHADER,vs],[gl.FRAGMENT_SHADER,fs]]){const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);
+    if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(sh));gl.attachShader(p,sh);}
+  gl.bindAttribLocation(p,0,'a_pos');gl.bindAttribLocation(p,1,'a_nrm');gl.bindAttribLocation(p,2,'a_col');gl.bindAttribLocation(p,3,'a_mat');
+  gl.linkProgram(p);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));
+  const u={};const n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);for(let i=0;i<n;i++){const a=gl.getActiveUniform(p,i);u[a.name]=gl.getUniformLocation(p,a.name);}
+  return {p,u};
+}
+const VS=`#version 300 es
+layout(location=0) in vec3 a_pos;layout(location=1) in vec3 a_nrm;layout(location=2) in vec4 a_col;layout(location=3) in float a_mat;
+uniform mat4 u_vp,u_model;
+out vec3 v_w;out vec3 v_n;out vec4 v_c;out float v_m;out vec3 v_l;
+void main(){vec4 w=u_model*vec4(a_pos,1.);v_w=w.xyz;v_n=mat3(u_model)*a_nrm;v_c=a_col;v_m=a_mat;v_l=a_pos;gl_Position=u_vp*w;}`;
+const FS=`#version 300 es
+precision highp float;
+const float GW=8.;
+in vec3 v_w;in vec3 v_n;in vec4 v_c;in float v_m;in vec3 v_l;
+uniform vec3 u_eye,u_team,u_tint,u_fog,u_sun;uniform float u_time,u_alpha,u_flash;
+out vec4 o;
+float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+float aa(float d,float w){float f=fwidth(d)*1.2;return 1.-smoothstep(w-f,w+f,d);}
+float hexd(vec2 p){p=abs(p);return max(dot(p,vec2(.5,.866025)),p.x);}
+vec4 hexc(vec2 uv){vec2 r=vec2(1.,1.7320508),h=r*.5;vec2 a=mod(uv,r)-h,b=mod(uv-h,r)-h;vec2 g=dot(a,a)<dot(b,b)?a:b;return vec4(g,uv-g);}
+void main(){
+  vec3 N=normalize(v_n);vec3 V=normalize(u_eye-v_w);int m=int(v_m+.5);
+  vec3 base=v_c.rgb;float alpha=v_c.a*u_alpha;float emis=0.,spec=.15,shin=24.;
+  if(m==1){
+    float zs=smoothstep(-10.,10.,v_w.z);vec3 tc=mix(vec3(.1,.45,1.),vec3(1.,.45,.08),zs);
+    float st=step(.5,fract(v_w.z/9.));
+    base=mix(vec3(.045,.10,.15),vec3(.06,.135,.19),st);
+    base+=tc*.05*smoothstep(0.,40.,abs(v_w.z))*1.0;
+    float gx=aa(abs(fract(v_w.x/3.)-.5)*3.-1.5+.04,0.)*0.0;
+    if(v_w.y<1.2){
+      float d=1e3;
+      d=min(d,abs(v_w.z));
+      d=min(d,abs(length(v_w.xz)-9.));
+      if(abs(v_w.x)<14.)d=min(d,abs(abs(v_w.z)-31.));
+      if(abs(v_w.z)>31.)d=min(d,abs(abs(v_w.x)-14.));
+      d=min(d,abs(abs(v_w.z)-39.)+ (abs(v_w.x)<GW?0.:5.));
+      float l=aa(d,.16);
+      vec3 lc=mix(vec3(.85,.95,1.),tc,.35+.5*smoothstep(15.,45.,abs(v_w.z)));
+      base=mix(base,lc*1.15,l);emis=max(emis,l*.85);
+      float sp=aa(length(v_w.xz),.9);base=mix(base,vec3(.9,1.,1.),sp);emis=max(emis,sp);
+    }
+    spec=.55;shin=70.;
+    // faint wall glow reflection near edges
+    float e=smoothstep(22.,30.,abs(v_w.x));base+=tc*.12*e;
+  }else if(m==2){
+    vec2 uv=abs(N.z)>.55?v_w.xy:(abs(N.x)>.55?v_w.zy:v_w.xz);
+    vec4 h=hexc(uv/2.4);float ed=.5-hexd(h.xy);
+    float line=aa(ed,.035);
+    float zs=smoothstep(-12.,12.,v_w.z);vec3 tc=mix(vec3(.15,.5,1.),vec3(1.,.5,.1),zs);
+    float pulse=.5+.5*sin(u_time*1.6-length(h.zw)*.35+v_w.z*.1);
+    float flash=u_flash;
+    base=tc*(.10+line*(.9+.8*pulse))+tc*flash*.35*(.5+.5*sin(u_time*20.));
+    alpha=clamp(v_c.a*(.55+line*1.4)+flash*.1,0.,1.)*u_alpha;emis=1.;
+  }else if(m==3){emis=1.;}
+  else if(m==5){
+    float dd=length(u_eye-v_w);
+    vec2 c=floor(vec2((v_w.x+v_w.z)*.32,v_w.y*.45+(v_w.x-v_w.z)*.05));
+    float hsh=hash(c);float hs2=hash(c+7.3);
+    vec3 pal=hsh<.25?vec3(.9,.25,.2):hsh<.5?vec3(.2,.5,1.):hsh<.7?vec3(.95,.9,.8):hsh<.85?vec3(.95,.7,.15):vec3(.3,.9,.5);
+    float fl=.55+.45*sin(u_time*(1.5+hs2*4.)+hs2*40.);
+    float row=smoothstep(.1,.35,fract(v_w.y*.45))*.9+.1;
+    vec3 cc=mix(vec3(.02,.025,.04),pal*.42*(.6+.4*fl)*(1.+u_flash*1.8),step(.25,hs2)*row);
+    base=mix(cc,vec3(.07,.07,.1)+pal*.02,smoothstep(35.,110.,dd));
+    spec=0.;
+  }else if(m==6){base=u_team*v_c.r;spec=.7;shin=70.;}
+  else if(m==7){
+    vec3 d=normalize(v_l);
+    float md=1.;
+    md=min(md,abs(d.x));md=min(md,abs(d.y));md=min(md,abs(d.z));
+    md=min(md,abs(dot(d,vec3(.7071,.7071,0.))));md=min(md,abs(dot(d,vec3(.7071,-.7071,0.))));
+    md=min(md,abs(dot(d,vec3(.7071,0.,.7071))));md=min(md,abs(dot(d,vec3(.7071,0.,-.7071))));
+    md=min(md,abs(dot(d,vec3(0.,.7071,.7071))));md=min(md,abs(dot(d,vec3(0.,.7071,-.7071))));
+    float l=aa(md,.045);
+    base=mix(vec3(.88,.92,.98),u_team,l*.9);emis=l*.9;spec=.9;shin=90.;
+    float fr=pow(1.-max(dot(N,V),0.),2.5);base+=u_team*fr*.9;emis=max(emis,fr*.7);
+  }else if(m==8){ // boost pad
+    float p=.6+.4*sin(u_time*4.);base=v_c.rgb*(.7+.5*p);emis=1.;
+  }
+  vec3 L=normalize(u_sun);float df=max(dot(N,L),0.);
+  vec3 hemi=mix(vec3(.10,.12,.2),vec3(.34,.40,.55),N.y*.5+.5);
+  vec3 col=base*(hemi+df*vec3(1.,.95,.88)*.95);
+  vec3 H=normalize(L+V);col+=spec*pow(max(dot(N,H),0.),shin)*vec3(1.,.97,.9);
+  col=mix(col,base,emis);
+  col*=u_tint;
+  float dist=length(u_eye-v_w);float f=1.-exp(-dist*dist*.00003);
+  col=mix(col,u_fog,f);
+  col=col/(1.+col*.12);
+  o=vec4(col,alpha);
+}`;
+const PVS=`#version 300 es
+layout(location=0) in vec4 a_p;layout(location=1) in vec4 a_c;
+uniform mat4 u_vp;uniform vec3 u_eye;uniform float u_sc;
+out vec4 v_c;
+void main(){gl_Position=u_vp*vec4(a_p.xyz,1.);float d=length(u_eye-a_p.xyz);gl_PointSize=clamp(a_p.w*u_sc/max(d,1.),1.,180.);v_c=a_c;}`;
+const PFS=`#version 300 es
+precision mediump float;in vec4 v_c;out vec4 o;
+void main(){vec2 q=gl_PointCoord*2.-1.;float r=dot(q,q);if(r>1.)discard;float a=(1.-r);a*=a;o=vec4(v_c.rgb*a*v_c.a,a*v_c.a);}`;
+const SVS=`#version 300 es
+layout(location=0) in vec2 a_q;uniform mat4 u_vp;uniform vec3 u_c;uniform vec2 u_s;out vec2 v_q;
+void main(){v_q=a_q;gl_Position=u_vp*vec4(u_c.x+a_q.x*u_s.x,u_c.y+.04,u_c.z+a_q.y*u_s.y,1.);}`;
+const SFS=`#version 300 es
+precision mediump float;in vec2 v_q;uniform float u_a;out vec4 o;
+void main(){float r=dot(v_q,v_q);if(r>1.)discard;o=vec4(0.,0.,0.,u_a*(1.-r)*(1.-r));}`;
+const prog=mkProg(VS,FS), pprog=mkProg(PVS,PFS), sprog=mkProg(SVS,SFS);
+/* ===================== meshes ===================== */
+function samples(b,r,extra){
+  const T=[0,.2,.4,.6,.8,1],out=[];
+  for(let i=T.length-1;i>=0;i--)out.push(-(b+r*T[i]));
+  const fl=extra.filter(e=>e>-b+1e-6&&e<b-1e-6).sort((a,c)=>a-c);
+  out.push(...fl);
+  for(let i=0;i<T.length;i++)out.push(b+r*T[i]);
+  return out;
+}
+function stepList(b,st,more){const a=[];for(let v=-b;v<=b+1e-6;v+=st)a.push(v);return a.concat(more||[]);}
+const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
+
+function buildArena(){
+  const floor=new MB(), shell=new MB();
+  const b=[BX,BY,BZ];
+  const S=[samples(BX,R,stepList(BX,4,[-GW,GW,0])),samples(BY,R,[-3,0]),samples(BZ,R,stepList(BZ,5,[]))];
+  for(let a=0;a<3;a++)for(const s of [-1,1]){
+    const ua=(a+1)%3, va=(a+2)%3;
+    const SU=S[ua], SV=S[va];
+    const grid=[];
+    for(let i=0;i<SU.length;i++){grid.push([]);for(let j=0;j<SV.length;j++){
+      const vc=[0,0,0];vc[a]=s*(b[a]+R);vc[ua]=SU[i];vc[va]=SV[j];
+      const inner=[clamp(vc[0],-b[0],b[0]),clamp(vc[1],-b[1],b[1]),clamp(vc[2],-b[2],b[2])];
+      const d=norm(sub(vc,inner));
+      const pos=[inner[0]+d[0]*R,inner[1]+d[1]*R+CY,inner[2]+d[2]*R];
+      grid[i].push({p:pos,n:[-d[0],-d[1],-d[2]]});
+    }}
+    const isFloor=(a===1&&s===-1);
+    for(let i=0;i<SU.length-1;i++)for(let j=0;j<SV.length-1;j++){
+      const q=[grid[i][j],grid[i+1][j],grid[i+1][j+1],grid[i][j+1]];
+      const cx=(q[0].p[0]+q[1].p[0]+q[2].p[0]+q[3].p[0])/4, cy=(q[0].p[1]+q[1].p[1]+q[2].p[1]+q[3].p[1])/4, cz=(q[0].p[2]+q[1].p[2]+q[2].p[2]+q[3].p[2])/4;
+      if(Math.abs(cx)<GW&&cy<GH&&Math.abs(cz)>AZ-R-0.01)continue;
+      const MBt=isFloor?floor:shell;
+      const ids=q.map(v=>{
+        const y=v.p[1];let al=y<3.5?.85:lerp(.85,.16,smooth(3.5,15,y));if(a===1&&s===1)al=.16;
+        return MBt.vert(v.p,v.n,isFloor?[1,1,1,1]:[1,1,1,al],isFloor?1:2);});
+      MBt.tri(ids[0],ids[1],ids[2]);MBt.tri(ids[0],ids[2],ids[3]);
+    }
+  }
+  // goals
+  for(const sz of [-1,1]){
+    const tc=TEAMCOL[sz<0?0:1], z0=sz*(AZ-R), z1=sz*(AZ+GD), zf=sz*(AZ-1);
+    floor.quadN([-GW,0,z0],[GW,0,z0],[GW,0,z1],[-GW,0,z1],[0,1,0],[1,1,1,1],1);
+    // fix normal up
+    // sides / ceiling / back (glass)
+    const gc=[tc[0],tc[1],tc[2],.55];
+    shell.quadN([GW,0,zf],[GW,GH,zf],[GW,GH,z1],[GW,0,z1],[-1,0,0],gc,2);
+    shell.quadN([-GW,0,zf],[-GW,0,z1],[-GW,GH,z1],[-GW,GH,zf],[1,0,0],gc,2);
+    shell.quadN([-GW,GH,zf],[-GW,GH,z1],[GW,GH,z1],[GW,GH,zf],[0,-1,0],gc,2);
+    shell.quadN([-GW,0,z1],[GW,0,z1],[GW,GH,z1],[-GW,GH,z1],[0,0,-sz],[tc[0],tc[1],tc[2],.7],2);
+    // posts & bar
+    const pc=[tc[0]*1.2,tc[1]*1.2,tc[2]*1.2,1];
+    floor.box(-GW,GH/2,sz*AZ,.45,GH/2+.2,.45,pc,3);floor.box(GW,GH/2,sz*AZ,.45,GH/2+.2,.45,pc,3);
+    floor.box(0,GH,sz*AZ,GW+.45,.45,.45,pc,3);
+    floor.box(0,.12,sz*(AZ+GD)-sz*.3,GW,.12,.3,pc,3);
+    // glow strip on floor in front of goal
+  }
+  return {floor:floor.build(),shell:shell.build()};
+}
+
+function ringPts(d,n){
+  const pts=[];const cs=[[1,1],[-1,1],[-1,-1],[1,-1]];
+  for(let k=0;k<4;k++){const c=cs[k],a0=[0,PI/2,PI,PI*1.5][k];
+    for(let i=0;i<=n;i++){const a=a0+i/n*PI/2;pts.push([c[0]*0+ (k===0?BX:k===1?-BX:k===2?-BX:BX)+Math.cos(a)*(R+d),
+      (k===0?BZ:k===1?BZ:k===2?-BZ:-BZ)+Math.sin(a)*(R+d)]);}}
+  return pts;
+}
+function buildStands(){
+  const mb=new MB(), N=12;
+  const tiers=[];const J=9;
+  for(let j=0;j<=J;j++){const t=j/J;tiers.push({d:14+t*34+ (t*t)*6,y:2+t*18+t*t*22});}
+  const ring=tiers.map(t=>ringPts(t.d,N));
+  const P=ring[0].length;
+  const cen=[0,CY,0];
+  for(let j=0;j<J;j++)for(let i=0;i<P;i++){
+    const i2=(i+1)%P; if(i===N+0&&false)continue;
+    const A=[ring[j][i][0],tiers[j].y,ring[j][i][1]],B=[ring[j][i2][0],tiers[j].y,ring[j][i2][1]],
+      C=[ring[j+1][i2][0],tiers[j+1].y,ring[j+1][i2][1]],D=[ring[j+1][i][0],tiers[j+1].y,ring[j+1][i][1]];
+    let n=norm(cross(sub(B,A),sub(D,A)));const mid=mul(add(A,C),.5);if(dot(n,sub(cen,mid))<0)n=mul(n,-1);
+    mb.quadN(A,B,C,D,n,[1,1,1,1],5);
+  }
+  // concourse ring (dark floor) d 0..14
+  const r0=ringPts(0,N),r1=ringPts(14,N);
+  for(let i=0;i<P;i++){const i2=(i+1)%P;
+    mb.quadN([r0[i][0],-.03,r0[i][1]],[r0[i2][0],-.03,r0[i2][1]],[r1[i2][0],-.03,r1[i2][1]],[r1[i][0],-.03,r1[i][1]],[0,1,0],[.03,.04,.07,1],0);
+    // fascia glow band
+    const za=r1[i][1],zb=r1[i2][1];
+    const ca=TEAMCOL[0].map((v,k)=>lerp(v,TEAMCOL[1][k],smooth(-14,14,za))),cb=TEAMCOL[0].map((v,k)=>lerp(v,TEAMCOL[1][k],smooth(-14,14,zb)));
+    const ia=mb.vert([r1[i][0],0,r1[i][1]],[0,0,0],[...ca.map(v=>v*1.1),1],3),ib=mb.vert([r1[i2][0],0,r1[i2][1]],[0,0,0],[...cb.map(v=>v*1.1),1],3);
+    const ic=mb.vert([r1[i2][0],1.0,r1[i2][1]],[0,0,0],[...cb.map(v=>v*1.1),1],3),id=mb.vert([r1[i][0],1.0,r1[i][1]],[0,0,0],[...ca.map(v=>v*1.1),1],3);
+    mb.tri(ia,ib,ic);mb.tri(ia,ic,id);
+  }
+  // light bars at the rim
+  const top=tiers[J];const rr2=ringPts(top.d-2,N);
+  for(let i=0;i<P;i+=2){const p=rr2[i];mb.box(p[0],top.y+2.5,p[1],1.6,.5,1.6,[1,.97,.88,1],3);}
+  return mb.build();
+}
+
+function buildCar(){
+  const mb=new MB(), T=[1,1,1,1];
+  const team=(k)=>[k,k,k,1];
+  mb.hexa([[-.95,-.3,-1.55],[.95,-.3,-1.55],[.95,-.3,1.6],[-.95,-.3,1.6],[-.95,.18,-1.55],[.95,.18,-1.55],[.8,.1,1.6],[-.8,.1,1.6]],team(1),6);
+  mb.hexa([[-.85,.18,-1.0],[.85,.18,-1.0],[.8,.1,.75],[-.8,.1,.75],[-.62,.62,-.75],[.62,.62,-.75],[.58,.5,.1],[-.58,.5,.1]],[.04,.07,.11,1],0);
+  mb.hexa([[-.6,.6,-.72],[.6,.6,-.72],[.56,.5,.08],[-.56,.5,.08],[-.6,.66,-.72],[.6,.66,-.72],[.56,.56,.08],[-.56,.56,.08]],team(.85),6);
+  mb.box(0,.66,-1.45,.92,.045,.3,team(.9),6);
+  mb.box(-.55,.4,-1.4,.05,.22,.06,[.05,.05,.07,1],0);mb.box(.55,.4,-1.4,.05,.22,.06,[.05,.05,.07,1],0);
+  mb.box(0,-.38,0,.88,.08,1.42,[.03,.03,.04,1],0);
+  mb.box(-.62,.07,1.6,.22,.06,.03,[1,.98,.85,1],3);mb.box(.62,.07,1.6,.22,.06,.03,[1,.98,.85,1],3);
+  mb.box(-.62,.07,-1.57,.22,.06,.03,[1,.15,.1,1],3);mb.box(.62,.07,-1.57,.22,.06,.03,[1,.15,.1,1],3);
+  mb.box(-.955,-.02,0,.02,.05,1.3,team(2.2),6);mb.box(.955,-.02,0,.02,.05,1.3,team(2.2),6);
+  mb.box(0,-.31,1.62,.8,.05,.1,[.03,.03,.04,1],0);
+  const wh=new MB();wh.cylX(0,0,0,.45,.17,16,[.035,.035,.04,1],0,[.62,.65,.72,1]);
+  // rim spokes
+  for(let k=0;k<5;k++){const a=k/5*TAU;wh.box(.175,Math.cos(a)*.2,Math.sin(a)*.2,.012,.045+Math.abs(Math.sin(a))*.0,.045,[.9,.92,1,1],0);}
+  return {car:mb.build(),wheel:wh.build()};
+}
+function buildBall(){
+  const mb=new MB();let verts=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+  let tris=[[0,2,4],[4,2,1],[1,2,5],[5,2,0],[0,4,3],[4,1,3],[1,5,3],[5,0,3]];
+  const cache=new Map();
+  const mid=(a,b)=>{const k=a<b?a+'_'+b:b+'_'+a;if(cache.has(k))return cache.get(k);const m=norm(add(verts[a],verts[b]));verts.push(m);cache.set(k,verts.length-1);return verts.length-1;};
+  for(let s=0;s<4;s++){const nt=[];for(const t of tris){const a=mid(t[0],t[1]),b=mid(t[1],t[2]),c=mid(t[2],t[0]);nt.push([t[0],a,c],[t[1],b,a],[t[2],c,b],[a,b,c]);}tris=nt;}
+  const ids=verts.map(v=>mb.vert(v,v,[1,1,1,1],7));
+  for(const t of tris){const a=verts[t[0]],b=verts[t[1]],c=verts[t[2]];const n=cross(sub(b,a),sub(c,a));const f=add(add(a,b),c);
+    if(dot(n,f)>0)mb.tri(ids[t[0]],ids[t[1]],ids[t[2]]);else mb.tri(ids[t[0]],ids[t[2]],ids[t[1]]);}
+  return mb.build();
+}
+function buildPad(){
+  const mb=new MB(), seg=6;
+  for(let k=0;k<seg;k++){const a0=k/seg*TAU,a1=(k+1)/seg*TAU;
+    mb.poly([[0,.06,0],[Math.cos(a0),.06,Math.sin(a0)],[Math.cos(a1),.06,Math.sin(a1)]],[0,1,0],[1,1,1,1],8);}
+  return mb.build();
+}
+const quadVAO=(()=>{const v=gl.createVertexArray();gl.bindVertexArray(v);const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,1,1,-1,1]),gl.STATIC_DRAW);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);gl.bindVertexArray(null);return v;})();
+
+const ARENA=buildArena(), STANDS=buildStands(), CARM=buildCar(), BALLM=buildBall(), PADM=buildPad();
+
+/* ===================== particles ===================== */
+const MAXP=5000;
+const P={n:0,head:0,pos:new Float32Array(MAXP*3),vel:new Float32Array(MAXP*3),life:new Float32Array(MAXP),max:new Float32Array(MAXP),
+  size:new Float32Array(MAXP),col:new Float32Array(MAXP*3),grav:new Float32Array(MAXP),drag:new Float32Array(MAXP),
+  buf:new Float32Array(MAXP*8)};
+const pvao=gl.createVertexArray(),pvb=gl.createBuffer();
+gl.bindVertexArray(pvao);gl.bindBuffer(gl.ARRAY_BUFFER,pvb);gl.bufferData(gl.ARRAY_BUFFER,P.buf.byteLength,gl.DYNAMIC_DRAW);
+gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,4,gl.FLOAT,false,32,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,4,gl.FLOAT,false,32,16);gl.bindVertexArray(null);
+function emit(p,v,life,size,c,grav,drag){
+  const i=P.head;P.head=(P.head+1)%MAXP;
+  P.pos[i*3]=p[0];P.pos[i*3+1]=p[1];P.pos[i*3+2]=p[2];P.vel[i*3]=v[0];P.vel[i*3+1]=v[1];P.vel[i*3+2]=v[2];
+  P.life[i]=life;P.max[i]=life;P.size[i]=size;P.col[i*3]=c[0];P.col[i*3+1]=c[1];P.col[i*3+2]=c[2];P.grav[i]=grav||0;P.drag[i]=drag||0;
+}
+function updParticles(dt){
+  for(let i=0;i<MAXP;i++){if(P.life[i]<=0)continue;P.life[i]-=dt;if(P.life[i]<=0)continue;
+    const d=Math.exp(-P.drag[i]*dt);P.vel[i*3]*=d;P.vel[i*3+1]=P.vel[i*3+1]*d-P.grav[i]*dt;P.vel[i*3+2]*=d;
+    P.pos[i*3]+=P.vel[i*3]*dt;P.pos[i*3+1]+=P.vel[i*3+1]*dt;P.pos[i*3+2]+=P.vel[i*3+2]*dt;
+    if(P.pos[i*3+1]<0.05&&P.grav[i]>0){P.pos[i*3+1]=0.05;P.vel[i*3+1]*=-.4;}}
+}
+function drawParticles(vp,eye,sc){
+  let n=0;const b=P.buf;
+  for(let i=0;i<MAXP;i++){if(P.life[i]<=0)continue;const t=P.life[i]/P.max[i];
+    b[n*8]=P.pos[i*3];b[n*8+1]=P.pos[i*3+1];b[n*8+2]=P.pos[i*3+2];b[n*8+3]=P.size[i]*(.3+.7*t);
+    b[n*8+4]=P.col[i*3];b[n*8+5]=P.col[i*3+1];b[n*8+6]=P.col[i*3+2];b[n*8+7]=Math.min(1,t*1.6);n++;}
+  if(!n)return;
+  gl.useProgram(pprog.p);gl.uniformMatrix4fv(pprog.u.u_vp,false,vp);gl.uniform3fv(pprog.u.u_eye,eye);gl.uniform1f(pprog.u.u_sc,sc);
+  gl.bindVertexArray(pvao);gl.bindBuffer(gl.ARRAY_BUFFER,pvb);gl.bufferSubData(gl.ARRAY_BUFFER,0,b.subarray(0,n*8));
+  gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE);gl.depthMask(false);
+  gl.drawArrays(gl.POINTS,0,n);gl.depthMask(true);gl.bindVertexArray(null);
+}
+/* ===================== game state ===================== */
+const CAR_W=[[.98,-.1,1.0],[-.98,-.1,1.0],[.98,-.1,-1.0],[-.98,-.1,-1.0]];
+const WR=0.45;
+const S={state:'menu',time:180,ot:false,score:[0,0],cars:[],player:null,pads:[],t:0,cd:0,goalT:0,slow:1,lastGoal:null,
+  cfg:{mode:2,diff:1,len:180,team:0},ballCam:true,msgs:[],feed:[],lastTouch:-1,lastTouchCar:null,shake:0,flash:0,pred:[],predT:0,endT:0,sunk:0,camGoal:null};
+const ball={p:[0,BR,0],v:[0,0,0],l:[1,0,0],u:[0,1,0],f:[0,0,1],w:[0,0,0],team:-1};
+const keys={};let mouseL=false,mouseR=false,jumpPressed=false;
+
+class Car{
+  constructor(team,idx,isPlayer){
+    this.team=team;this.idx=idx;this.isPlayer=isPlayer;
+    this.inp={thr:0,steer:0,pitch:0,roll:0,boost:false,drift:false,jumpHeld:false,jumpPress:false};
+    this.bot={state:'',t:0,jumpPhase:0,jt:0,stuck:0,rev:0,role:0,noise:0,nt:0,tgt:[0,0,0]};
+    this.name=isPlayer?'YOU':(team===0?['Nova','Rex','Kilo'][idx]:['Blaze','Vex','Onyx'][idx]);
+    this.reset([0,.55,0],0);this.spin=[0,0,0,0];this.steerVis=0;
+  }
+  reset(pos,yaw){
+    this.p=[pos[0],pos[1],pos[2]];this.v=[0,0,0];this.u=[0,1,0];this.f=[Math.sin(yaw),0,Math.cos(yaw)];this.l=cross(this.u,this.f);
+    this.w=[0,0,0];this.boost=33;this.onGround=true;this.canFlip=true;this.flipWindow=0;this.flipT=0;this.jumpLock=0;this.jumpHold=0;
+    this.dead=false;this.respawnT=0;this.boosting=0;this.airTime=0;this.flipAxis=[1,0,0];this.groundN=[0,1,0];this.stuckT=0;this.sparkT=0;
+  }
+  get speed(){return len(this.v);}
+}
+
+function padList(){
+  const L=[];const seen=new Set();
+  const addP=(x,z,big)=>{for(const sx of [1,-1])for(const sz of [1,-1]){const X=x*sx,Z=z*sz,k=X+','+Z;if(seen.has(k))continue;seen.add(k);L.push({x:X,z:Z,big,cd:0});}};
+  addP(24,37,true);addP(27,0,true);
+  [[0,40],[12,38],[20,30],[6,28],[16,20],[0,18],[24,12],[10,10],[18,0],[6,2]].forEach(a=>addP(a[0],a[1],false));
+  return L;
+}
+
+function setupMatch(){
+  const c=S.cfg;S.cars=[];S.score=[0,0];S.time=c.len;S.ot=false;S.msgs=[];S.feed=[];
+  const n=c.mode;
+  for(let t=0;t<2;t++)for(let i=0;i<n;i++){
+    const isP=(t===c.team&&i===0);const car=new Car(t,i,isP);S.cars.push(car);if(isP)S.player=car;
+  }
+  S.pads=padList();S.ballCam=true;
+  kickoffReset();S.state='countdown';S.cd=3.4;S.endT=0;
+  for(let i=0;i<MAXP;i++)P.life[i]=0;
+}
+function kickoffReset(){
+  const n=S.cfg.mode;
+  for(const c of S.cars){
+    const s=c.team===0?-1:1;
+    const slots=[[0,28],[-10,34],[10,34]];
+    const sl=slots[c.idx%3];
+    c.reset([sl[0]*(c.team===0?1:-1),.56,s*sl[1]],c.team===0?0:PI);
+    if(S.cfg.mode===1)c.p[0]=0;
+    c.boost=33;
+    if(c.bot){c.bot.jumpPhase=0;c.bot.stuck=0;c.bot.rev=0;}
+  }
+  ball.p=[0,BR+0.02,0];ball.v=[0,0,0];ball.l=[1,0,0];ball.u=[0,1,0];ball.f=[0,0,1];ball.w=[0,0,0];ball.team=-1;
+  for(const p of S.pads)p.cd=0;
+  S.lastTouch=-1;S.lastTouchCar=null;S.pred=[];S.predT=0;
+}
+
+/* ===================== ball physics ===================== */
+function ballStep(b,dt,real){
+  b.v[1]-=G*dt;
+  const drag=Math.exp(-0.025*dt);b.v[0]*=drag;b.v[2]*=drag;
+  b.p[0]+=b.v[0]*dt;b.p[1]+=b.v[1]*dt;b.p[2]+=b.v[2]*dt;
+  let contact=false,cn=null;
+  for(let it=0;it<2;it++){
+    const pen=surf(b.p[0],b.p[1],b.p[2],BR);
+    if(pen>0){
+      const n=[SN[0],SN[1],SN[2]];
+      b.p[0]+=n[0]*pen;b.p[1]+=n[1]*pen;b.p[2]+=n[2]*pen;
+      const vn=dot(b.v,n);
+      if(vn<0){
+        const e=-vn>4?0.6:0.15;
+        const k=(1+e)*vn;
+        b.v[0]-=n[0]*k;b.v[1]-=n[1]*k;b.v[2]-=n[2]*k;
+        const tf=Math.exp(-1.2*dt)*1;b.v[0]*=1;
+        if(real&&-vn>5)bounceFx(b.p,n,-vn);
+        if(-vn>0.5||it===0){contact=true;cn=n;}
+      }else {contact=true;cn=n;}
+    }
+  }
+  const sp=len(b.v);if(sp>60){const k=60/sp;b.v[0]*=k;b.v[1]*=k;b.v[2]*=k;}
+  if(real){
+    if(contact){const vt=sub(b.v,mul(cn,dot(b.v,cn)));b.w=mul(cross(cn,vt),1/BR);
+      // rolling resistance
+      const r=Math.exp(-0.18*dt);const vn2=dot(b.v,cn);const nn=mul(cn,vn2);const t2=mul(sub(b.v,nn),r);b.v=add(nn,t2);}
+    else b.w=mul(b.w,Math.exp(-0.15*dt));
+    const wl=len(b.w);if(wl>1e-4){const ax=mul(b.w,1/wl),an=wl*dt;b.l=rotAxis(b.l,ax,an);b.u=rotAxis(b.u,ax,an);b.f=rotAxis(b.f,ax,an);}
+  }
+}
+function predictBall(){
+  const b={p:[...ball.p],v:[...ball.v]};S.pred=[];const dt=1/30;
+  for(let i=0;i<110;i++){ballStep(b,dt,false);S.pred.push({p:[...b.p],v:[...b.v],t:(i+1)*dt});
+    if(Math.abs(b.p[2])>AZ+BR)break;}
+}
+
+/* ===================== car physics ===================== */
+function rotBasis(c,ax,ang){c.l=rotAxis(c.l,ax,ang);c.u=rotAxis(c.u,ax,ang);c.f=rotAxis(c.f,ax,ang);}
+function reortho(c){c.f=norm(c.f);c.l=norm(cross(c.u,c.f));c.u=norm(cross(c.f,c.l));c.f=cross(c.l,c.u);}
+
+function stepCar(c,dt,live){
+  if(c.dead){c.respawnT-=dt;if(c.respawnT<=0&&live)respawnCar(c);return;}
+  const I=c.inp;
+  c.flipWindow-=dt;c.jumpLock-=dt;c.flipT-=dt;c.jumpHold-=dt;c.boosting-=dt;
+  // wheel contacts
+  let nC=0,ns=[0,0,0],maxPen=-1;
+  if(c.jumpLock<=0){
+    for(const w of CAR_W){
+      const px=c.p[0]+c.l[0]*w[0]+c.u[0]*w[1]+c.f[0]*w[2],py=c.p[1]+c.l[1]*w[0]+c.u[1]*w[1]+c.f[1]*w[2],pz=c.p[2]+c.l[2]*w[0]+c.u[2]*w[1]+c.f[2]*w[2];
+      const pen=surf(px,py,pz,WR);
+      if(pen>-0.22){nC++;ns[0]+=SN[0];ns[1]+=SN[1];ns[2]+=SN[2];if(pen>maxPen)maxPen=pen;}
+    }
+  }
+  const was=c.onGround;
+  let jumped=false;
+  if(nC>=2){
+    c.onGround=true;
+    const n=norm(ns);c.groundN=n;
+    if(maxPen>0){c.p[0]+=n[0]*maxPen;c.p[1]+=n[1]*maxPen;c.p[2]+=n[2]*maxPen;}
+    const dn=dot(c.u,n);
+    if(dn<0.9999){const ax=cross(c.u,n),s=len(ax);
+      if(s>1e-5){const ang=Math.atan2(s,dn)*(1-Math.exp(-(n[1]>.85?11:16)*dt));rotBasis(c,mul(ax,1/s),ang);}
+      else if(dn<0){rotBasis(c,c.f,Math.PI*Math.min(1,dt*8));}}
+    reortho(c);
+    let vn=dot(c.v,n);
+    if(vn<0){c.v=madd(c.v,n,-vn);if(!was&&vn<-5)landFx(c,-vn);}
+    c.airTime=0;c.canFlip=true;c.flipT=0;c.flipWindow=1.5;
+    // tangent frame
+    let ft=norm(sub(c.f,mul(n,dot(c.f,n)))),lt=cross(n,ft);
+    let fs=dot(c.v,ft),ls=dot(c.v,lt);
+    const thr=I.thr;
+    const canBoost=I.boost&&c.boost>0;
+    if(thr!==0){
+      if(thr*fs<-0.4)fs+=thr*45*dt;
+      else if(thr>0)fs+=thr*28*clamp(1-Math.abs(fs)/25,0,1)*dt;
+      else fs+=thr*28*clamp(1-Math.abs(fs)/16,0,1)*dt;
+    }else fs*=Math.exp(-0.55*dt);
+    if(canBoost){fs+=(fs<-1?50:24)*dt;c.boost=Math.max(0,c.boost-33.3*dt);c.boosting=0.25;if(fs>34)fs=34;}
+    ls*=Math.exp(-(I.drift?1.7:13)*dt);
+    // steering
+    const sf=clamp(Math.abs(fs)/3+(thr!==0?.3:0),0,1);
+    const rate=lerp(3.0,1.0,clamp(Math.abs(fs)/28,0,1))*(I.drift?1.6:1);
+    const yaw=I.steer*rate*sf*(fs>=-0.3?1:-1)*dt;
+    if(yaw!==0){rotBasis(c,n,yaw);reortho(c);}
+    ft=norm(sub(c.f,mul(n,dot(c.f,n))));lt=cross(n,ft);
+    c.v=add(mul(ft,fs),mul(lt,ls));
+    c.v=madd(c.v,[0,-G,0],0);
+    // gravity along surface
+    const gt=sub([0,-G,0],mul(n,dot([0,-G,0],n)));
+    c.v=madd(c.v,gt,0.55*dt);
+    // stick
+    c.v=madd(c.v,n,-(n[1]>.9?4:14)*dt);
+    c.wheelV=fs;
+    if(I.drift&&Math.abs(ls)>3&&c.speed>8&&Math.random()<.7)driftFx(c);
+    // jump
+    if(I.jumpPress){
+      c.v=madd(c.v,c.u,9.2);c.jumpHold=0.2;c.jumpLock=0.12;c.onGround=false;c.canFlip=true;c.flipWindow=1.5;jumped=true;
+      sfx('jump');
+    }
+  }else{
+    c.onGround=false;
+    c.airTime+=dt;
+    if(was&&!jumped){c.canFlip=true;c.flipWindow=1.5;}
+    // single wheel / roof contacts
+    if(nC===1&&maxPen>0){const n=norm(ns);c.p=madd(c.p,n,maxPen);const vn=dot(c.v,n);if(vn<0)c.v=madd(c.v,n,-vn*1.25);}
+    const bp=surf(c.p[0],c.p[1],c.p[2],0.55);
+    if(bp>0&&c.jumpLock<=0){const n=[SN[0],SN[1],SN[2]];c.p=madd(c.p,n,bp);const vn=dot(c.v,n);if(vn<0)c.v=madd(c.v,n,-vn*1.3);
+      const ax=cross(c.u,n),s=len(ax);if(s>1e-4&&dot(c.u,n)<0.3)rotBasis(c,mul(ax,1/s),Math.atan2(s,dot(c.u,n))*(1-Math.exp(-5*dt)));}
+    c.v[1]-=G*dt;
+    // jump hold
+    if(c.jumpHold>0&&I.jumpHeld)c.v=madd(c.v,c.u,15*dt);
+    // second jump / flip
+    if(I.jumpPress&&c.canFlip&&c.flipWindow>0){
+      c.canFlip=false;
+      const fF=norm([c.f[0],0,c.f[2]]),lF=norm([c.l[0],0,c.l[2]]);
+      let d=add(mul(fF,I.pitch),mul(lF,I.steer*0.9));
+      if(len(d)>0.35&&Math.abs(c.u[1])>0.3){
+        d=norm(d);c.v=madd(c.v,d,7.2);c.v[1]*=0.55;
+        c.flipAxis=norm(cross([0,1,0],d));c.flipT=0.55;
+        sfx('flip');
+      }else{c.v=madd(c.v,c.u,8.2);sfx('jump');}
+    }
+    // attitude
+    if(c.flipT>0){c.w=mul(c.flipAxis,TAU/0.55);}
+    else{
+      const wt=add(add(mul(c.l,I.pitch*4.2),mul(c.u,I.steer*3.2)),mul(c.f,I.roll*5.5));
+      const k=1-Math.exp(-10*dt);c.w=[lerp(c.w[0],wt[0],k),lerp(c.w[1],wt[1],k),lerp(c.w[2],wt[2],k)];
+    }
+    const wl=len(c.w);if(wl>1e-4){rotBasis(c,mul(c.w,1/wl),wl*dt);reortho(c);}
+    if(I.boost&&c.boost>0){c.v=madd(c.v,c.f,19*dt);c.boost=Math.max(0,c.boost-33.3*dt);c.boosting=0.25;}
+    const dr=Math.exp(-0.03*dt);c.v[0]*=dr;c.v[2]*=dr;
+  }
+  I.jumpPress=false;
+  const sp=len(c.v);if(sp>40){c.v=mul(c.v,40/sp);}
+  c.p=madd(c.p,c.v,dt);
+  // wheel visuals
+  const fsv=dot(c.v,c.f);for(let i=0;i<4;i++)c.spin[i]+=fsv*dt/WR;
+  c.steerVis=lerp(c.steerVis,I.steer*0.45,1-Math.exp(-14*dt));
+  // boost fx
+  if(c.boosting>0.15&&Math.random()<0.9)boostFx(c);
+}
+
+function respawnCar(c){
+  const s=c.team===0?-1:1;
+  c.reset([rr(-10,10),.56,s*(AZ-12)],c.team===0?0:PI);c.boost=33;
+  sparkBurst(c.p,TEAMCOL[c.team],20,10,1.0);
+}
+
+/* ===================== interactions ===================== */
+function carBall(c){
+  if(c.dead)return;
+  const d=sub(ball.p,c.p);
+  if(len(d)>5)return;
+  const lx=dot(d,c.l),ly=dot(d,c.u)-0.1,lz=dot(d,c.f);
+  const hx=.98,hy=.5,hz=1.62;
+  const cx=clamp(lx,-hx,hx),cy=clamp(ly,-hy,hy),cz=clamp(lz,-hz,hz);
+  const dx=lx-cx,dy=ly-cy,dz=lz-cz,dist=Math.hypot(dx,dy,dz);
+  if(dist>=BR)return;
+  const dc=norm(sub(ball.p,madd(c.p,c.u,.1)));
+  let n;
+  if(dist<1e-4)n=dc;else{n=norm(add(add(mul(c.l,dx),mul(c.u,dy)),mul(c.f,dz)));n=norm(add(mul(n,.62),mul(dc,.38)));}
+  ball.p=madd(ball.p,n,BR-dist);
+  const rv=dot(sub(ball.v,c.v),n);
+  S.lastTouch=c.team;S.lastTouchCar=c;ball.team=c.team;
+  if(rv<0){
+    const e=.58;let j=-(1+e)*rv*.8;
+    if(c.flipT>0)j*=1.22;
+    ball.v=madd(ball.v,n,j);
+    ball.v[1]+=Math.min(3,-rv*.04);
+    c.v=madd(c.v,n,-j*.1);
+    const sp=len(ball.v);if(sp>58)ball.v=mul(ball.v,58/sp);
+    hitFx(ball.p,n,-rv,c);
+  }
+}
+function carCar(a,b){
+  if(a.dead||b.dead)return;
+  if(len(sub(a.p,b.p))>5)return;
+  for(const sa of [.8,-.8])for(const sb of [.8,-.8]){
+    const pa=madd(a.p,a.f,sa),pb=madd(b.p,b.f,sb);
+    const d=sub(pb,pa),dist=len(d);const rad=2.0;
+    if(dist<rad&&dist>1e-4){
+      const n=mul(d,1/dist),ov=rad-dist;
+      a.p=madd(a.p,n,-ov*.5);b.p=madd(b.p,n,ov*.5);
+      const rv=dot(sub(b.v,a.v),n);
+      if(rv<0){
+        if(a.team!==b.team){
+          if(a.boosting>0&&a.speed>25&&dot(a.v,n)>17){demolish(b,a);return;}
+          if(b.boosting>0&&b.speed>25&&dot(b.v,n)<-17){demolish(a,b);return;}
+        }
+        const J=-(1+.4)*rv*.5;a.v=madd(a.v,n,-J);b.v=madd(b.v,n,J);
+        sfx('bump',Math.min(1,-rv/20));
+        if(-rv>6)sparkBurst(mul(add(pa,pb),.5),[1,.9,.6],6,6,.4);
+      }
+    }
+  }
+}
+function demolish(v,by){
+  v.dead=true;v.respawnT=3;
+  sparkBurst(v.p,TEAMCOL[v.team],70,22,1.4);sparkBurst(v.p,[1,.9,.7],40,16,1.0);
+  sfx('boom');S.shake=Math.max(S.shake,.6);
+  S.feed.unshift({t:5,a:by.name,b:v.name,ta:by.team,tb:v.team});if(S.feed.length>4)S.feed.pop();
+  if(v===S.player)S.msgs.push({t:2,txt:'DEMOLISHED',col:'#ff5a4a'});
+  if(by===S.player)S.msgs.push({t:1.6,txt:'DEMOLITION!',col:'#ffd34a'});
+}
+
+function padUpdate(dt){
+  for(const p of S.pads){
+    if(p.cd>0){p.cd-=dt;continue;}
+    for(const c of S.cars){
+      if(c.dead||c.p[1]>2.6)continue;
+      const dx=c.p[0]-p.x,dz=c.p[2]-p.z,r=p.big?3.2:2.0;
+      if(dx*dx+dz*dz<r*r&&c.boost<100){
+        c.boost=Math.min(100,c.boost+(p.big?100:12));p.cd=p.big?10:4;
+        sparkBurst([p.x,.6,p.z],[1,.8,.2],p.big?30:10,p.big?10:5,.7);
+        if(c===S.player)sfx('pad',p.big?1:.5);
+        break;
+      }
+    }
+  }
+}
+
+/* ===================== effects ===================== */
+function sparkBurst(p,col,n,spd,life){
+  for(let i=0;i<n;i++){const a=Math.random()*TAU,b=Math.acos(rr(-1,1)),s=spd*rr(.3,1);
+    emit(p,[Math.sin(b)*Math.cos(a)*s,Math.abs(Math.cos(b))*s*.9,Math.sin(b)*Math.sin(a)*s],life*rr(.5,1),rr(.5,1.1),col,14,1.2);}
+}
+function hitFx(p,n,v,c){
+  const k=clamp(v/30,0,1);
+  if(v>4)sparkBurst(p,TEAMCOL[c.team].map(x=>x*.6+.4),Math.floor(6+k*24),6+k*14,.5);
+  sfx('hit',k);
+  if(c===S.player)S.shake=Math.max(S.shake,k*.35);
+}
+function bounceFx(p,n,v){sfx('bounce',clamp(v/30,0,1));}
+function landFx(c,v){
+  if(c===S.player)sfx('land',clamp(v/18,0,1));
+  for(const w of [CAR_W[2],CAR_W[3]]){const q=add(add(add(c.p,mul(c.l,w[0])),mul(c.u,w[1]-.3)),mul(c.f,w[2]));
+    for(let i=0;i<3;i++)emit(q,[rr(-2,2),rr(0,2),rr(-2,2)],.5,1.4,[.5,.6,.8],-1,2);}
+}
+function driftFx(c){
+  for(const w of [CAR_W[2],CAR_W[3]]){const q=add(add(add(c.p,mul(c.l,w[0])),mul(c.u,w[1]-.35)),mul(c.f,w[2]));
+    emit(q,[rr(-2,2),rr(.5,3),rr(-2,2)],.35,.8,[1,.75,.35],10,1);}
+}
+function boostFx(c){
+  const q=add(add(c.p,mul(c.f,-1.7)),mul(c.u,0.05));
+  const b=mul(c.f,-12);
+  const col=Math.random()<.5?[1,.55,.12]:[.4,.7,1];
+  for(let i=0;i<2;i++)emit(madd(q,c.l,rr(-.3,.3)),add(add(b,c.v),[rr(-1.5,1.5),rr(-1.5,1.5),rr(-1.5,1.5)]),.32,rr(1.2,2.2),col,0,3);
+}
+/* ===================== bots ===================== */
+const DIFFS=[{name:'Rookie',spd:.78,boost:.45,err:.28,flip:.35,pred:false,aerial:false},
+             {name:'Pro',spd:.93,boost:.8,err:.12,flip:.7,pred:true,aerial:false},
+             {name:'All-Star',spd:1,boost:1,err:.04,flip:1,pred:true,aerial:true}];
+const d2=(a,b)=>{const x=a[0]-b[0],z=a[2]-b[2];return x*x+z*z;};
+
+function botDrive(c,tg,o){
+  const I=c.inp,D=DIFFS[S.cfg.diff],B=c.bot;
+  const n=c.onGround?c.groundN:[0,1,0];
+  let to=sub(tg,c.p);to=sub(to,mul(n,dot(to,n)));
+  const dist=len(to);
+  let ang=Math.atan2(dot(to,c.l),dot(to,c.f));
+  if(o.noisy)ang+=B.noise;
+  const fs=dot(c.v,c.f);
+  I.steer=clamp(ang*2.6,-1,1);
+  let ds=(o.speed||27)*D.spd;
+  if(!o.charge&&dist<14)ds=Math.min(ds,dist*1.5+7);
+  const aa=Math.abs(ang);
+  if(aa>1.1&&fs>9&&dist>6)I.drift=true;
+  if(aa>2.2&&fs>9){I.thr=.2;}
+  else if(fs<ds)I.thr=1;else if(fs>ds+4)I.thr=-.7;else I.thr=0;
+  if(aa<.22&&dist>(o.charge?6:16)&&c.boost>6&&fs>-1&&B.boostOK&&fs<32)I.boost=true;
+  if(dist<4&&!o.charge&&fs>6){I.thr=-.5;}
+}
+function botFace(c,dir,allowBoost){
+  const I=c.inp;
+  const yawE=Math.atan2(dot(dir,c.l),dot(dir,c.f)),pitchE=Math.atan2(dot(dir,c.u),dot(dir,c.f));
+  I.steer=clamp(yawE*3,-1,1);I.pitch=-clamp(pitchE*3,-1,1);
+  const e=Math.atan2(dot([0,1,0],c.l),c.u[1]);I.roll=-clamp(e*2.5,-1,1)*(Math.abs(pitchE)>1?0.3:1);
+  const tot=Math.hypot(yawE,pitchE);
+  if(allowBoost&&tot<.38&&c.boost>0)I.boost=true;
+  return tot;
+}
+function botLevel(c){
+  const I=c.inp;
+  I.pitch=clamp(c.f[1]*3,-1,1);
+  const e=Math.atan2(dot([0,1,0],c.l),c.u[1]);I.roll=-clamp(e*2.5,-1,1);
+  const fl=[c.f[0],0,c.f[2]];const vh=[c.v[0],0,c.v[2]];
+  if(len(vh)>6&&len(fl)>.3){const t=norm(vh);I.steer=clamp(Math.atan2(dot(t,c.l),dot(t,c.f))*2,-1,1)*(c.u[1]>0?1:0);}
+}
+
+function botThink(c,dt){
+  const I=c.inp,B=c.bot,D=DIFFS[S.cfg.diff];
+  I.thr=0;I.steer=0;I.pitch=0;I.roll=0;I.boost=false;I.drift=false;I.jumpHeld=false;
+  if(c.dead)return;
+  B.t+=dt;B.nt-=dt;
+  if(B.nt<=0){B.nt=.5+Math.random()*.6;B.noise=rr(-D.err,D.err);B.boostOK=Math.random()<D.boost;}
+  const own=c.team===0?-1:1, ownGoal=[0,0,own*AZ], enemyGoal=[0,0,-own*AZ];
+  const tmates=S.cars.filter(o=>o.team===c.team&&!o.dead);
+  tmates.sort((a,b)=>(d2(a.p,ball.p)/(1+a.speed*.2))-(d2(b.p,ball.p)/(1+b.speed*.2)));
+  let role=Math.max(0,tmates.indexOf(c));
+  if(S.cfg.mode===1)role=0;
+  const bp=ball.p;
+  const ballOwnSide=bp[2]*own>0; // ball in own half
+  // target ball point
+  let tp=bp,tt=0;
+  if(D.pred&&S.pred.length){
+    for(const q of S.pred){tp=q.p;tt=q.t;const d=Math.sqrt(d2(q.p,c.p));if(d/(Math.max(c.speed,10)*.8+8)<=q.t&&q.p[1]<8)break;}
+  }
+  const fs=dot(c.v,c.f);
+  const dBall=len(sub(bp,c.p));
+  // airborne handling ---------------------------------------------------
+  if(!c.onGround){
+    if(B.aerial&&B.jt<2.2){
+      B.jt+=dt;
+      const dir=norm(sub(tp,c.p));
+      const tot=botFace(c,dir,true);
+      if(c.canFlip&&B.jumpPhase===1&&B.jt>.12){B.jumpPhase=2;} 
+      I.jumpHeld=B.jt<.25;
+      return;
+    }
+    B.aerial=false;
+    // flip into ball
+    if(B.jumpPhase===1){
+      B.jt+=dt;
+      if(B.jt>.1&&c.canFlip){
+        const dirw=sub(bp,c.p);const ahead=dot(norm(dirw),c.f);
+        I.jumpPress=true;I.pitch=1;I.steer=clamp(Math.atan2(dot(dirw,c.l),dot(dirw,c.f))*1.5,-1,1)*.0;B.jumpPhase=2;B.jt=0;
+      }
+      I.jumpHeld=B.jt<.2;
+      return;
+    }
+    if(B.jumpPhase===2){B.jt+=dt;if(B.jt>.55)B.jumpPhase=0;if(c.flipT>0)return;}
+    botLevel(c);
+    if(c.v[1]<-2||c.airTime>.5)I.boost=false;
+    return;
+  }
+  B.jumpPhase=0;B.aerial=false;
+  // upside down on ceiling => jump off
+  if(c.groundN[1]<-.25){if(B.t%.7<dt)I.jumpPress=true;}
+  // stuck handling
+  if(B.rev>0){B.rev-=dt;I.thr=-1;I.steer=Math.sin(B.t*3)>0?1:-1;return;}
+  if(Math.abs(fs)<1.5&&c.speed<2.5){B.stuck+=dt;if(B.stuck>1.3){B.rev=.8;B.stuck=0;}}else B.stuck=0;
+
+  // role target --------------------------------------------------------
+  let tg,opts={noisy:false};
+  const flatBall=[tp[0],0,tp[2]];
+  const aimX=clamp(tp[0]*.15,-4,4);
+  const toGoal=norm([aimX-tp[0],0,-own*AZ-tp[2]]);
+  const toMe=[c.p[0]-tp[0],0,c.p[2]-tp[2]];
+  const behindness=dot(toMe,toGoal);
+  let attack=(role===0);
+  // goalie logic for last man
+  if(!attack&&S.cfg.mode>1&&role===S.cfg.mode-1&&tmates.length>1){
+    const gx=clamp(bp[0]*.4,-6,6);
+    tg=[gx,0,own*(AZ-10)];
+    if(ballOwnSide&&Math.abs(bp[2])>AZ-26&&dBall<22)attack=true;
+    else{opts={speed:24};
+      if(d2(c.p,tg)<9){// idle facing ball
+        tg=[bp[0],0,c.p[2]];I.thr=0;const ang=Math.atan2(dot(sub(tg,c.p),c.l),dot(sub(tg,c.p),c.f));I.steer=clamp(ang*2,-1,1);I.thr=Math.abs(fs)>2?-.5:0;return;}
+      botDrive(c,tg,opts);return;}
+  }
+  if(!attack){ // support
+    let sup=[lerp(tp[0],0,.4)+(c.idx%2?9:-9),0,lerp(tp[2],own*AZ,.5)];
+    if(c.boost<35||S.pads.length&&c.boost<55){
+      let best=null,bd=1e9;for(const p of S.pads){if(p.cd>0)continue;const d=d2(c.p,[p.x,0,p.z])-(p.big?500:0);if(d<bd&&d<45*45){bd=d;best=p;}}
+      if(best)sup=[best.x,0,best.z];
+    }
+    botDrive(c,sup,{speed:26});
+    return;
+  }
+  // attacker: grab boost if ball far and low boost
+  if(c.boost<20&&dBall>45){
+    let best=null,bd=1e9;for(const p of S.pads){if(p.cd>0)continue;const d=d2(c.p,[p.x,0,p.z]);if(d<bd&&d<35*35){bd=d;best=p;}}
+    if(best){botDrive(c,[best.x,0,best.z],{speed:27});return;}
+  }
+  opts={noisy:true,speed:28};
+  if(behindness<-2.5||dBall<10){
+    // behind the ball: charge through it
+    const aimPt=[tp[0]-toGoal[0]*(BR+.6),0,tp[2]-toGoal[2]*(BR+.6)];
+    tg=dBall<16?[tp[0],0,tp[2]]:aimPt;
+    opts.charge=dBall<16;
+  }else{
+    // go around
+    const perp=[toGoal[2],0,-toGoal[0]];const side=dot(toMe,perp)>=0?1:-1;
+    tg=[tp[0]-toGoal[0]*13+perp[0]*side*11,0,tp[2]-toGoal[2]*13+perp[2]*side*11];
+    tg[0]=clamp(tg[0],-AX+4,AX-4);tg[2]=clamp(tg[2],-AZ+4,AZ-4);
+    // if ball is close to own goal, drive straight to it to clear
+    if(ballOwnSide&&Math.abs(bp[2])>AZ-22){tg=[tp[0]-toGoal[0]*6,0,tp[2]-toGoal[2]*6];}
+  }
+  botDrive(c,tg,opts);
+  // jumps ----------------------------------------------------------------
+  if(!I.jumpPress&&B.jumpPhase===0){
+    const rel=sub(bp,c.p);const ahead=dot(norm(rel),c.f);
+    const hgt=bp[1]-c.p[1];
+    if(D.aerial&&c.boost>35&&hgt>5.5&&Math.sqrt(d2(bp,c.p))<26&&ahead>.3&&Math.random()<.04){
+      I.jumpPress=true;B.jumpPhase=1;B.jt=0;B.aerial=true;return;}
+    if(dBall<8&&dBall>3&&ahead>.8&&fs>9&&hgt<3.8&&Math.random()<D.flip*.07){
+      I.jumpPress=true;B.jumpPhase=1;B.jt=0;return;}
+    if(dBall<9&&hgt>2.6&&hgt<6&&ahead>.7&&Math.random()<.08*D.flip){I.jumpPress=true;B.jumpPhase=1;B.jt=0;}
+  }
+}
+/* ===================== audio ===================== */
+let AC=null,master,nbuf,eng,engG,engF,boostG,crowdG,crowdBase=.05;
+function initAudio(){
+  if(AC)return;
+  try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){AC=null;return;}
+  master=AC.createGain();master.gain.value=.55;master.connect(AC.destination);
+  nbuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=nbuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  const ns=()=>{const s=AC.createBufferSource();s.buffer=nbuf;s.loop=true;s.start();return s;};
+  eng=[AC.createOscillator(),AC.createOscillator()];eng[0].type='sawtooth';eng[1].type='square';
+  engF=AC.createBiquadFilter();engF.type='lowpass';engF.frequency.value=500;engG=AC.createGain();engG.gain.value=0;
+  eng.forEach(o=>{o.connect(engF);o.start();});engF.connect(engG);engG.connect(master);
+  const bs=ns(),bf=AC.createBiquadFilter();bf.type='bandpass';bf.frequency.value=900;bf.Q.value=.6;boostG=AC.createGain();boostG.gain.value=0;
+  bs.connect(bf);bf.connect(boostG);boostG.connect(master);
+  const cs=ns(),cf=AC.createBiquadFilter();cf.type='lowpass';cf.frequency.value=700;crowdG=AC.createGain();crowdG.gain.value=crowdBase;
+  cs.connect(cf);cf.connect(crowdG);crowdG.connect(master);
+}
+function tone(f,dur,type,vol,slide,delay){
+  if(!AC)return;const t=AC.currentTime+(delay||0),o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t);
+  if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(20,slide),t+dur);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0008,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.02);
+}
+function noiseB(dur,vol,freq,delay,type){
+  if(!AC)return;const t=AC.currentTime+(delay||0),s=AC.createBufferSource();s.buffer=nbuf;const f=AC.createBiquadFilter();f.type=type||'lowpass';f.frequency.value=freq;
+  const g=AC.createGain();g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0008,t+dur);s.connect(f);f.connect(g);g.connect(master);s.start(t,Math.random());s.stop(t+dur+.02);
+}
+function sfx(n,v){
+  if(!AC)return;v=v===undefined?1:v;
+  switch(n){
+    case 'jump':tone(240,.15,'square',.08,520);break;
+    case 'flip':tone(180,.3,'sawtooth',.07,700);noiseB(.25,.12,2500,0,'highpass');break;
+    case 'hit':tone(110,.22,'sine',.5*v+.1,40);noiseB(.18,.35*v+.05,1800);break;
+    case 'bounce':tone(150,.12,'sine',.25*v,60);break;
+    case 'bump':tone(90,.15,'triangle',.3*v,40);noiseB(.1,.2*v,900);break;
+    case 'boom':tone(70,.8,'sawtooth',.5,25);noiseB(.9,.7,900);noiseB(.4,.4,3000,0,'highpass');break;
+    case 'pad':tone(660*(v>.7?1:1.5),.12,'sine',.18,v>.7?1320:2000);if(v>.7)tone(990,.25,'sine',.15,1980,.08);break;
+    case 'land':noiseB(.12,.25*v,500);break;
+    case 'beep':tone(520,.18,'square',.12);break;
+    case 'go':tone(880,.5,'square',.14);tone(1320,.5,'square',.08);break;
+    case 'goal':
+      tone(220,1.6,'sawtooth',.2,200);tone(277,1.6,'sawtooth',.15,250);tone(330,1.6,'sawtooth',.15,300);
+      noiseB(1.8,.35,1500);if(crowdG){crowdG.gain.cancelScheduledValues(AC.currentTime);crowdG.gain.setValueAtTime(.4,AC.currentTime);crowdG.gain.exponentialRampToValueAtTime(crowdBase,AC.currentTime+4);}break;
+    case 'whistle':tone(1700,.5,'sine',.15,1800);break;
+  }
+}
+function audioUpdate(){
+  if(!AC||!S.player)return;const c=S.player;
+  const act=(S.state==='play'||S.state==='goal')&&!c.dead&&!paused;
+  const sp=c.speed;
+  const t=AC.currentTime;
+  const f=48+sp*4.2+(c.inp.thr?12:0);
+  eng[0].frequency.setTargetAtTime(f,t,.06);eng[1].frequency.setTargetAtTime(f*.5,t,.06);
+  engF.frequency.setTargetAtTime(280+sp*28,t,.08);
+  engG.gain.setTargetAtTime(act?.045+Math.min(sp/40,1)*.05+(c.inp.thr?.03:0):0,t,.08);
+  boostG.gain.setTargetAtTime(act&&c.boosting>0?.16:0,t,.04);
+}
+
+/* ===================== input ===================== */
+let paused=false;
+addEventListener('keydown',e=>{
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code))e.preventDefault();
+  if(e.repeat)return;
+  keys[e.code]=true;initAudio();
+  if(e.code==='Space')jumpPressed=true;
+  if(e.code==='KeyV'||e.code==='Tab')S.ballCam=!S.ballCam;
+  if(e.code==='KeyR'&&S.player&&S.state==='play'){const c=S.player;c.reset([c.p[0],Math.max(c.p[1],.56),c.p[2]],Math.atan2(c.f[0],c.f[2]));c.v=[0,0,0];}
+  if(e.code==='Escape'&&(S.state==='play'||S.state==='countdown'||S.state==='goal')){paused=!paused;document.getElementById('pause').style.display=paused?'flex':'none';}
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;mouseL=mouseR=false;});
+cv.addEventListener('mousedown',e=>{initAudio();if(e.button===0)mouseL=true;if(e.button===2)mouseR=true;cv.focus();});
+addEventListener('mouseup',e=>{if(e.button===0)mouseL=false;if(e.button===2)mouseR=false;});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+let padPrevJump=false,padPrevY=false;
+function readPlayerInput(c){
+  const I=c.inp,k=keys;
+  let thr=(k.KeyW||k.ArrowUp?1:0)-(k.KeyS||k.ArrowDown?1:0);
+  let steer=(k.KeyA||k.ArrowLeft?1:0)-(k.KeyD||k.ArrowRight?1:0);
+  let roll=(k.KeyE?1:0)-(k.KeyQ?1:0);
+  let boost=!!(k.ShiftLeft||k.ShiftRight||mouseL), drift=!!(k.KeyC||mouseR);
+  let pitch=thr;
+  const gp=navigator.getGamepads?navigator.getGamepads()[0]:null;
+  if(gp){
+    const dz=v=>Math.abs(v)<.14?0:v;
+    const ax=dz(gp.axes[0]||0),ay=dz(gp.axes[1]||0);
+    const rt=gp.buttons[7]?gp.buttons[7].value:0,lt=gp.buttons[6]?gp.buttons[6].value:0;
+    if(ax)steer=-ax;if(rt||lt)thr=rt-lt;
+    if(ay)pitch=-ay;else if(thr&&!(k.KeyW||k.KeyS))pitch=thr;
+    if(gp.buttons[1]&&gp.buttons[1].pressed||gp.buttons[5]&&gp.buttons[5].pressed)boost=true;
+    if(gp.buttons[2]&&gp.buttons[2].pressed||gp.buttons[4]&&gp.buttons[4].pressed)drift=true;
+    const jp=gp.buttons[0]&&gp.buttons[0].pressed;if(jp&&!padPrevJump)jumpPressed=true;padPrevJump=jp;
+    I.jumpHeld=!!jp||!!k.Space;
+    const yy=gp.buttons[3]&&gp.buttons[3].pressed;if(yy&&!padPrevY)S.ballCam=!S.ballCam;padPrevY=yy;
+    if(gp.buttons[0]&&gp.buttons[0].pressed)I.jumpHeld=true;
+  }else I.jumpHeld=!!k.Space;
+  I.thr=thr;I.steer=steer;I.roll=roll;I.boost=boost;I.drift=drift;I.pitch=pitch;
+  if(jumpPressed){I.jumpPress=true;jumpPressed=false;}
+}
+
+/* ===================== camera ===================== */
+const cam={p:[0,14,-50],look:[0,3,0],fov:1.25,snap:true,orb:0};
+function updateCamera(dt){
+  const c=S.player;let tp,tl;
+  const st=S.state;
+  if(st==='demo'||st==='end'||!c){
+    cam.orb+=dt*.12;const r=62;
+    tp=[Math.sin(cam.orb)*r*.7,26,Math.cos(cam.orb)*r];tl=[ball.p[0]*.5,ball.p[1]*.5+2,ball.p[2]*.5];
+    cam.p=tp;cam.look=tl;cam.fov=1.0;return;
+  }
+  if(st==='goal'){
+    cam.orb+=dt*.5*S.slow;
+    const gz=S.lastGoal?S.lastGoal.z:ball.p[2];
+    const cx=[ball.p[0],ball.p[1],ball.p[2]];
+    tp=[cx[0]+Math.cos(cam.orb)*16,Math.max(4,cx[1]+5),cx[2]+Math.sin(cam.orb)*16];tl=cx;
+    cam.p=madd(cam.p,sub(tp,cam.p),1-Math.exp(-4*dt));cam.look=madd(cam.look,sub(tl,cam.look),1-Math.exp(-6*dt));
+    cam.fov=lerp(cam.fov,1.1,.05);return;
+  }
+  let target,look;
+  if(c.dead){
+    target=[ball.p[0]*.6,22,ball.p[2]*.6-sgn(ball.p[2]||1)*30];look=ball.p;
+  }else{
+    const sp=c.speed;
+    if(S.ballCam){
+      const dir=norm(sub(ball.p,c.p));
+      target=madd(madd(c.p,dir,-11.5),[0,1,0],5.2);
+      if(target[1]<4)target[1]=4;
+      look=lerp3(c.p,ball.p,.78);look[1]+=1.2;
+      if(dot(dir,c.f)<-.3&&sp>8){ // ball behind: blend to chase to avoid whiplash
+        const fl=norm([c.f[0],0,c.f[2]]);const t2=madd(madd(c.p,fl,-10),[0,4,0],1);target=lerp3(target,t2,.6);look=lerp3(look,madd(c.p,fl,8),.5);
+      }
+    }else{
+      let fl=[c.f[0],0,c.f[2]];if(len(fl)<.3)fl=[c.v[0],0,c.v[2]];fl=norm(fl);
+      target=madd(madd(c.p,fl,-10),[0,1,0],4.0);look=madd(c.p,fl,9);look[1]+=1.2;
+    }
+  }
+  const k=S.ballCam?7:9;
+  if(cam.snap){cam.p=target;cam.look=look;cam.snap=false;}
+  else{const a=1-Math.exp(-k*dt);cam.p=madd(cam.p,sub(target,cam.p),a);cam.look=madd(cam.look,sub(look,cam.look),1-Math.exp(-12*dt));}
+  const sp=c?c.speed:0;
+  cam.fov=lerp(cam.fov,1.22+Math.min(sp/34,1)*.16+(c&&c.boosting>0?.07:0),1-Math.exp(-4*dt));
+}
+const lerp3=(a,b,t)=>[lerp(a[0],b[0],t),lerp(a[1],b[1],t),lerp(a[2],b[2],t)];
+function camCollide(){
+  for(let i=0;i<3;i++){const pen=surf(cam.p[0],cam.p[1],cam.p[2],1.4);if(pen>0){cam.p=madd(cam.p,[SN[0],SN[1],SN[2]],pen);}}
+}
+
+/* ===================== render ===================== */
+const SUN=norm([.35,1,.25]);const FOG=[.018,.026,.05];
+let W=1,H=1,DPR=1,VP=IDM;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,1.75);
+  const w=Math.floor(innerWidth*DPR),h=Math.floor(innerHeight*DPR);
+  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;hudCv.width=w;hudCv.height=h;}
+  W=w;H=h;
+}
+function setU(team,tint,alpha){
+  const u=prog.u;gl.uniform3fv(u.u_team,team);gl.uniform3fv(u.u_tint,tint);gl.uniform1f(u.u_alpha,alpha);
+}
+function drawM(m,model){gl.uniformMatrix4fv(prog.u.u_model,false,model);gl.bindVertexArray(m.vao);gl.drawElements(gl.TRIANGLES,m.count,gl.UNSIGNED_INT,0);}
+const ONE3=[1,1,1];
+function shadow(p,sx,sz,a){
+  if(p[1]>9)return;const al=a*(1-p[1]/9);if(al<.02)return;
+  gl.uniform3f(sprog.u.u_c,p[0],0,p[2]);gl.uniform2f(sprog.u.u_s,sx,sz);gl.uniform1f(sprog.u.u_a,al);gl.drawArrays(gl.TRIANGLE_FAN,0,4);
+}
+function render(dt){
+  resize();
+  updateCamera(dt);
+  let eye=cam.p;
+  if(S.shake>0){eye=[eye[0]+rr(-1,1)*S.shake,eye[1]+rr(-1,1)*S.shake,eye[2]+rr(-1,1)*S.shake];S.shake=Math.max(0,S.shake-dt*1.8);}
+  cam.p=eye;camCollide();eye=cam.p;
+  const view=lookAt(eye,cam.look,[0,1,0]),proj=persp(cam.fov,W/H,.5,400);
+  VP=mmul(proj,view);
+  gl.viewport(0,0,W,H);gl.clearColor(FOG[0],FOG[1],FOG[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.disable(gl.BLEND);
+  gl.useProgram(prog.p);const u=prog.u;
+  gl.uniformMatrix4fv(u.u_vp,false,VP);gl.uniform3fv(u.u_eye,eye);gl.uniform3fv(u.u_fog,FOG);gl.uniform3fv(u.u_sun,SUN);
+  gl.uniform1f(u.u_time,S.t);gl.uniform1f(u.u_flash,S.flash);
+  setU([1,1,1],ONE3,1);
+  drawM(STANDS,IDM);drawM(ARENA.floor,IDM);
+  // pads
+  for(const p of S.pads){
+    const act=p.cd<=0;const col=act?(p.big?[1,.78,.22]:[.25,.9,1]):[.12,.13,.17];
+    setU([1,1,1],col,1);const r=p.big?2.1:1.15;
+    drawM(PADM,new Float32Array([r,0,0,0,0,1,0,0,0,0,r,0,p.x,0,p.z,1]));
+    if(act&&p.big){const h=1.2+Math.sin(S.t*3)*.3;emitPadGlow(p);}
+  }
+  // cars
+  for(const c of S.cars){
+    if(c.dead)continue;
+    setU(TEAMCOL[c.team],ONE3,1);
+    const m=basisM(c.l,c.u,c.f,c.p);
+    drawM(CARM.car,m);
+    for(let i=0;i<4;i++){
+      const w=CAR_W[i],left=w[0]>0;
+      let loc=transM(w[0],w[1],w[2]);
+      loc=mmul(loc,rotYM((i<2?c.steerVis:0)+(left?0:PI)));
+      loc=mmul(loc,rotXM(left?c.spin[i]:-c.spin[i]));
+      drawM(CARM.wheel,mmul(m,loc));
+    }
+  }
+  // ball
+  const bc=ball.team>=0?TEAMCOL[ball.team]:[.6,.85,1];
+  setU(bc,ONE3,1);drawM(BALLM,basisM(ball.l,ball.u,ball.f,ball.p,BR));
+  // shadows
+  gl.useProgram(sprog.p);gl.uniformMatrix4fv(sprog.u.u_vp,false,VP);gl.bindVertexArray(quadVAO);
+  gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+  shadow(ball.p,BR*1.15,BR*1.15,.6);
+  for(const c of S.cars){if(c.dead||c.groundN&&c.onGround&&c.groundN[1]<.8)continue;shadow(c.p,1.5,2.2,.55);}
+  gl.depthMask(true);
+  // particles
+  drawParticles(VP,eye,H*.55);
+  // glass shell
+  gl.useProgram(prog.p);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+  setU([1,1,1],ONE3,1);drawM(ARENA.shell,IDM);
+  gl.depthMask(true);gl.disable(gl.BLEND);
+  drawHUD(dt);
+}
+function emitPadGlow(p){ if(Math.random()<.25)emit([p.x+rr(-1.5,1.5),.2,p.z+rr(-1.5,1.5)],[0,rr(2,5),0],.9,1.1,[1,.7,.2],0,.5); }
+
+/* ===================== HUD ===================== */
+function fmtTime(t){t=Math.max(0,Math.ceil(t));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
+function txt(s,x,y,size,col,align,weight,stroke){
+  hx.font=(weight||'800')+' italic '+size+'px "Segoe UI",system-ui,sans-serif';hx.textAlign=align||'center';hx.textBaseline='middle';
+  if(stroke!==false){hx.lineWidth=Math.max(2,size*.12);hx.strokeStyle='rgba(0,0,0,.65)';hx.lineJoin='round';hx.strokeText(s,x,y);}
+  hx.fillStyle=col||'#fff';hx.fillText(s,x,y);
+}
+function rrect(x,y,w,h,r){hx.beginPath();hx.moveTo(x+r,y);hx.arcTo(x+w,y,x+w,y+h,r);hx.arcTo(x+w,y+h,x,y+h,r);hx.arcTo(x,y+h,x,y,r);hx.arcTo(x,y,x+w,y,r);hx.closePath();}
+function drawHUD(dt){
+  hx.setTransform(1,0,0,1,0,0);hx.clearRect(0,0,W,H);
+  const U=Math.min(W,H*1.6)/1000; // unit scale
+  if(S.state==='demo'){
+    txt('DEMO',W-60*U,H-30*U,18*U,'rgba(255,255,255,.5)','center','700');return;
+  }
+  const c=S.player;
+  // name tags
+  for(const o of S.cars){
+    if(o===c||o.dead)continue;
+    const q=project(VP,madd(o.p,[0,1,0],2.2),W,H);if(!q)continue;
+    const d=len(sub(o.p,cam.p));const s=clamp(1.3-d/90,.55,1.1)*U;
+    const col=TEAMCSS[o.team];
+    hx.fillStyle=col;hx.beginPath();hx.moveTo(q[0],q[1]+6*s);hx.lineTo(q[0]-8*s,q[1]-6*s);hx.lineTo(q[0]+8*s,q[1]-6*s);hx.closePath();hx.fill();
+    if(d<60)txt(o.name,q[0],q[1]-18*s,15*s,col,'center','700');
+  }
+  // ball marker
+  {const q=project(VP,ball.p,W,H);
+    if(!q||q[0]<0||q[0]>W||q[1]<0||q[1]>H){
+      const dir=norm(sub(ball.p,cam.p));const vx=[VP[0],VP[4],VP[8]],vy=[VP[1],VP[5],VP[9]];
+      let ax=dot(dir,[VP[0],VP[4],VP[8]]),ay=-dot(dir,[VP[1],VP[5],VP[9]]);
+      if(q){ax=q[0]-W/2;ay=q[1]-H/2;if(q[2]<0){ax*=-1;ay*=-1;}}
+      const a=Math.atan2(ay,ax);const rx=W/2-60*U,ry=H/2-60*U;const t=Math.min(rx/Math.abs(Math.cos(a)||1e-3),ry/Math.abs(Math.sin(a)||1e-3));
+      const x=W/2+Math.cos(a)*t,y=H/2+Math.sin(a)*t;
+      hx.save();hx.translate(x,y);hx.rotate(a);hx.fillStyle='rgba(255,255,255,.85)';hx.beginPath();hx.moveTo(14*U,0);hx.lineTo(-8*U,-9*U);hx.lineTo(-8*U,9*U);hx.closePath();hx.fill();hx.restore();
+    }}
+  // scoreboard
+  const cx=W/2,top=14*U;
+  rrect(cx-190*U,top,380*U,58*U,14*U);hx.fillStyle='rgba(6,10,22,.72)';hx.fill();
+  hx.fillStyle=TEAMCSS[0];rrect(cx-190*U,top,110*U,58*U,14*U);hx.fill();
+  hx.fillStyle=TEAMCSS[1];rrect(cx+80*U,top,110*U,58*U,14*U);hx.fill();
+  hx.fillStyle='rgba(0,0,0,.18)';hx.fillRect(cx-100*U,top,1,1);
+  txt(String(S.score[0]),cx-135*U,top+31*U,44*U,'#fff');txt(String(S.score[1]),cx+135*U,top+31*U,44*U,'#fff');
+  txt(S.ot?'OVERTIME':fmtTime(S.time),cx,top+30*U,S.ot?22*U:34*U,S.time<=10&&!S.ot&&S.time>0?'#ff6a5a':'#fff');
+  // messages
+  if(S.state==='countdown'){
+    const n=Math.ceil(S.cd-0.4);const s=S.cd-0.4;
+    if(n>0){const f=1-(s-Math.floor(s));txt(String(n),W/2,H*.36,(120+f*50)*U,'#fff');}
+    else txt('GO!',W/2,H*.36,150*U,'#ffe36a');
+  }
+  if(S.state==='goal'&&S.lastGoal){
+    const g=S.lastGoal;const col=TEAMCSS[g.team];
+    const k=Math.min(1,(4-S.goalT)*4);
+    txt('GOAL!',W/2,H*.28,(150+30*(1-k))*U,col);
+    txt((g.who||'')+(g.speed?'  ·  '+Math.round(g.speed*3.6)+' km/h':''),W/2,H*.28+90*U,26*U,'#fff','center','700');
+  }
+  for(let i=S.msgs.length-1;i>=0;i--){const m=S.msgs[i];m.t-=dt;if(m.t<=0){S.msgs.splice(i,1);continue;}
+    hx.globalAlpha=Math.min(1,m.t*2);txt(m.txt,W/2,H*.5-(i*40)*U,46*U,m.col);hx.globalAlpha=1;}
+  // kill feed
+  for(let i=S.feed.length-1;i>=0;i--){const f=S.feed[i];f.t-=dt;if(f.t<=0){S.feed.splice(i,1);continue;}}
+  S.feed.forEach((f,i)=>{const y=(100+i*28)*U;hx.globalAlpha=Math.min(1,f.t);
+    txt(f.b,W-40*U,y,17*U,TEAMCSS[f.tb],'right','700');
+    const bw=hx.measureText(f.b).width;txt('✕',W-40*U-bw-14*U,y,15*U,'#fff','right','700');
+    const x2=W-40*U-bw-30*U;txt(f.a,x2,y,17*U,TEAMCSS[f.ta],'right','700');hx.globalAlpha=1;});
+  if(!c)return;
+  // boost gauge
+  const gx=W-110*U,gy=H-120*U,gr=64*U;
+  hx.lineWidth=14*U;hx.lineCap='round';
+  hx.strokeStyle='rgba(8,12,24,.7)';hx.beginPath();hx.arc(gx,gy,gr,PI*.75,PI*2.25);hx.stroke();
+  const bv=c.boost/100;
+  const grad=hx.createLinearGradient(gx-gr,gy+gr,gx+gr,gy-gr);grad.addColorStop(0,'#ffb02a');grad.addColorStop(1,'#ff4a1a');
+  hx.strokeStyle=c.boost>0.5?grad:'rgba(0,0,0,0)';
+  if(bv>0.005){hx.beginPath();hx.arc(gx,gy,gr,PI*.75,PI*.75+PI*1.5*bv);hx.stroke();}
+  txt(String(Math.round(c.boost)),gx,gy-4*U,50*U,c.boost<15?'#ff7a6a':'#fff');
+  txt('BOOST',gx,gy+34*U,13*U,'rgba(255,255,255,.65)','center','700');
+  txt(Math.round(c.speed*3.6)+' km/h',gx,gy+gr+30*U,17*U,'rgba(255,255,255,.75)','center','700');
+  if(c.speed>26)txt('SUPERSONIC',gx,gy-gr-18*U,15*U,'#9fe4ff','center','800');
+  txt(S.ballCam?'BALL CAM':'CHASE CAM',gx,gy-gr-40*U,12*U,'rgba(255,255,255,.5)','center','700');
+  // flip indicator
+  if(!c.onGround&&c.canFlip&&c.flipWindow>0)txt('FLIP READY',W/2,H-60*U,16*U,'rgba(180,230,255,.8)','center','700');
+  // radar
+  const rw=96*U,rh=rw*AZ/AX*.78+0,rx=24*U,ry=H-24*U-rh;
+  hx.fillStyle='rgba(6,10,22,.55)';rrect(rx,ry,rw,rh,8*U);hx.fill();
+  const mx=x=>rx+rw/2+x/(AX+4)*rw/2,mz=z=>ry+rh/2+z/(AZ+10)*rh/2;
+  hx.strokeStyle='rgba(255,255,255,.25)';hx.lineWidth=1;hx.beginPath();hx.moveTo(rx,mz(0));hx.lineTo(rx+rw,mz(0));hx.stroke();
+  for(const p of S.pads){hx.fillStyle=p.cd>0?'rgba(255,255,255,.12)':(p.big?'#ffc23a':'rgba(120,220,255,.7)');hx.beginPath();hx.arc(mx(p.x),mz(p.z),(p.big?3.2:1.6)*U,0,TAU);hx.fill();}
+  for(const o of S.cars){if(o.dead)continue;hx.fillStyle=TEAMCSS[o.team];hx.beginPath();hx.arc(mx(o.p[0]),mz(o.p[2]),(o===c?4.5:3.5)*U,0,TAU);hx.fill();
+    if(o===c){hx.strokeStyle='#fff';hx.lineWidth=2*U;hx.beginPath();hx.arc(mx(o.p[0]),mz(o.p[2]),5.5*U,0,TAU);hx.stroke();}}
+  hx.fillStyle='#fff';hx.beginPath();hx.arc(mx(ball.p[0]),mz(ball.p[2]),3.6*U,0,TAU);hx.fill();
+  // flash overlay
+  if(S.flash>0.01){hx.fillStyle='rgba(255,255,255,'+(S.flash*.25)+')';hx.fillRect(0,0,W,H);}
+}
+
+/* ===================== game flow ===================== */
+function setupDemo(){
+  S.cfg.mode=2;S.cars=[];S.score=[0,0];
+  for(let t=0;t<2;t++)for(let i=0;i<2;i++){const car=new Car(t,i,false);S.cars.push(car);}
+  S.player=null;S.pads=padList();kickoffReset();S.state='demo';cam.snap=true;
+}
+function startMatch(){
+  initAudio();
+  document.getElementById('menu').classList.add('hide');document.getElementById('endbox').style.display='none';
+  setupMatch();cam.snap=true;S.slow=1;S.flash=0;
+}
+function onGoal(team){
+  const who=S.lastTouchCar?S.lastTouchCar.name:'';
+  S.score[team]++;S.state='goal';S.goalT=4.2;S.slow=.28;
+  S.lastGoal={team,who:S.lastTouch===team&&who?who:'',speed:len(ball.v),z:ball.p[2]};
+  S.flash=1;S.shake=.5;sfx('goal');
+  const col=TEAMCOL[team];
+  for(let i=0;i<260;i++){const a=Math.random()*TAU,b=Math.acos(rr(-1,1)),s=rr(6,30);
+    emit(ball.p,[Math.sin(b)*Math.cos(a)*s,Math.abs(Math.cos(b))*s+4,Math.sin(b)*Math.sin(a)*s],rr(1.2,3),rr(1,2.2),Math.random()<.5?col:[1,1,1],10,.6);}
+  S.matchOver=S.ot||(S.time<=0&&S.score[0]!==S.score[1]);
+}
+function endMatch(){
+  S.state='end';const p=S.cfg.team;const me=S.score[p],them=S.score[1-p];
+  const e=document.getElementById('endbox');e.style.display='flex';
+  const t=document.getElementById('endtitle');
+  t.textContent=me>them?'VICTORY':me<them?'DEFEAT':'DRAW';t.style.color=me>=them?(me>them?'#ffe36a':'#fff'):'#ff7a6a';
+  document.getElementById('endscore').textContent='Blue '+S.score[0]+'  —  '+S.score[1]+' Orange';
+  sfx('whistle');
+}
+function simStep(h,live){
+  // inputs set outside
+  for(const c of S.cars)stepCar(c,h,live);
+  if(!live)return;
+  ballStep(ball,h,true);
+  for(const c of S.cars)carBall(c);
+  for(let i=0;i<S.cars.length;i++)for(let j=i+1;j<S.cars.length;j++)carCar(S.cars[i],S.cars[j]);
+  padUpdate(h);
+}
+let acc=0;
+function update(dt){
+  S.t+=dt;S.flash=Math.max(0,S.flash-dt*1.1);
+  const st=S.state;
+  if(st==='menu')return;
+  if(st==='countdown'){
+    const prev=Math.ceil(S.cd-0.4);S.cd-=dt;const now=Math.ceil(S.cd-0.4);
+    if(now!==prev&&now>0)sfx('beep');
+    if(S.cd<=0.4&&prev>0&&now<=0)sfx('go');
+    for(const c of S.cars)c.inp.jumpPress=false;jumpPressed=false;
+    if(S.cd<=0){S.state='play';}
+    return;
+  }
+  if(st==='end'){updParticles(dt);return;}
+  // thinking at frame rate
+  for(const c of S.cars){
+    if(c.isPlayer&&!S.auto)readPlayerInput(c);else botThink(c,dt);
+  }
+  S.predT-=dt;if(S.predT<=0){predictBall();S.predT=.12;}
+  if(st==='goal'){S.goalT-=dt;const k=clamp((4.2-S.goalT-1.6)/1.8,0,1);S.slow=lerp(.28,1,k*k*(3-2*k));}
+  const sdt=dt*(st==='goal'?S.slow:1);
+  acc+=sdt;const h=1/120;let n=0;
+  while(acc>=h&&n<12){
+    simStep(h,true);acc-=h;n++;
+    if(S.state==='play'||(S.state==='demo')){
+      if(Math.abs(ball.p[2])>AZ+BR*.85&&Math.abs(ball.p[0])<GW){
+        const team=ball.p[2]>0?0:1;
+        if(S.state==='demo'){kickoffReset();}
+        else onGoal(team);
+      }
+    }
+  }
+  if(acc>h*4)acc=0;
+  updParticles(dt);
+  if(st==='play'){
+    if(!S.ot){S.time-=dt;if(S.time<=0){S.time=0;if(S.score[0]===S.score[1]){S.ot=true;S.msgs.push({t:2.5,txt:'OVERTIME',col:'#ffe36a'});sfx('whistle');}else{S.matchOver=true;endMatch();}}}
+    else S.time+=dt;
+  }
+  if(st==='goal'&&S.goalT<=0){
+    if(S.matchOver){endMatch();}
+    else{kickoffReset();S.state='countdown';S.cd=3.4;cam.snap=true;S.slow=1;acc=0;}
+  }
+  if(st==='demo'){
+    S.demoT=(S.demoT||0)+dt;
+    if(S.demoT>60){S.demoT=0;kickoffReset();}
+  }
+}
+let last=0;
+function frame(ts){
+  requestAnimationFrame(frame);
+  let dt=(ts-last)/1000;last=ts;if(!(dt>0))dt=1/60;dt=Math.min(dt,.05);
+  if(window.__fixedDt)dt=window.__fixedDt;
+  if(!paused)update(dt);
+  try{render(paused?0:dt);}catch(e){if(!window.__renderErr){window.__renderErr=e;console.error(e);}}
+  audioUpdate();
+}
+/* ===================== UI ===================== */
+function seg(id,key,num){
+  const el=document.getElementById(id);
+  el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');S.cfg[key]=num?+b.dataset.v:b.dataset.v;});
+}
+seg('s-mode','mode',1);seg('s-diff','diff',1);seg('s-len','len',1);seg('s-team','team',1);
+document.getElementById('go').addEventListener('click',()=>{startMatch();cv.focus();});
+document.getElementById('again').addEventListener('click',()=>{startMatch();cv.focus();});
+document.getElementById('tomenu').addEventListener('click',()=>{document.getElementById('endbox').style.display='none';document.getElementById('menu').classList.remove('hide');setupDemo();});
+addEventListener('resize',resize);
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&(S.state==='play'||S.state==='countdown')&&!paused){paused=true;document.getElementById('pause').style.display='flex';}});
+window.__sim=(s)=>{for(let i=0;i<s*60;i++)update(1/60);};window.__S=S;window.__ball=ball;window.__start=(cfg)=>{Object.assign(S.cfg,cfg||{});startMatch();};window.__cam=cam;
+setupDemo();requestAnimationFrame(frame);
+</script>
+
+</body></html>
